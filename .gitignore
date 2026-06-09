@@ -1,17 +1,60 @@
-
+# === Gradle ===
+.gradle/
+build/
+*/build/
 *.iml
-.gradle
-.idea
-.kotlin
+*.jar
+*.war
+*.aar
+*.apk
+*.aab
+*.class
+gradle/verification-metadata.xml
+
+# === IDE ===
+.idea/
+*.ipr
+*.iws
+.kotlin/
+.kotlin-module/
+.attach_pid*
+
+# === OS ===
 .DS_Store
-build
-*/build
-captures
-.externalNativeBuild
-.cxx
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# === Android ===
 local.properties
-xcuserdata/
-Pods/
+.cxx/
 *.jks
+*.keystore
+captures/
+.externalNativeBuild/
+lint/intermediates/
+
+# === Maven / Publishing ===
 *.gpg
-*yarn.lock
+secring.*
+sonatype.*
+maven-secrets.*
+buildSrc/.gradle/
+
+# === Logs ===
+*.log
+*.trace
+hs_err_pid*
+
+# === Environment ===
+.env
+.env.local
+.env.*.local
+
+# === Misc ===
+*/.gitignore
+!/.gitignore
+yarn.lock
+package-lock.json
