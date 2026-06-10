@@ -28,6 +28,9 @@ dependencies {
     implementation(libs.ktor.server.status.pages)
     implementation(libs.ktor.serialization.json)
 
+    // KotlinX JSON
+    implementation(libs.kotlinx.serialization.json)
+
     // Exposed ORM + SQLite
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
@@ -41,6 +44,9 @@ dependencies {
     // Génération QR Code
     implementation(libs.zxing.core)
     implementation(libs.zxing.javase)
+
+    // mDNS (découverte réseau — keycepass.local)
+    implementation("org.jmdns:jmdns:3.5.9")
 
     // Compose Desktop
     implementation(compose.desktop.currentOs)

@@ -12,6 +12,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.ak.keycepass.desktop.data.database.DatabaseManager
 import com.ak.keycepass.desktop.data.server.KtorServer
+import com.ak.keycepass.desktop.data.server.MdnsService
 import com.ak.keycepass.desktop.ui.AdminLayout
 import com.ak.keycepass.desktop.ui.theme.KeycePassTheme
 import kotlinx.coroutines.launch
@@ -27,10 +28,14 @@ fun main() = application {
     KtorServer.start(port = 8080)
     println("[KeycePass] Serveur démarré sur http://192.168.1.84:8080")
 
+    // 3. Annonce mDNS (keycepass.local)
+    MdnsService.start(port = 8080)
+
     Window(
         onCloseRequest = {
             appScope.launch {
                 KtorServer.stop()
+                MdnsService.stop()
                 println("[KeycePass] Serveur arrêté")
             }
             exitApplication()
