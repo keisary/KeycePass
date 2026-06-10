@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.ak.keycepass.shared.domain.model.Seance
+import com.ak.keycepass.shared.domain.model.StatutSeance
 
 /**
  * ViewModel gérant le cycle complet de scan de présence (US_02, US_03, US_04).
@@ -23,6 +25,51 @@ class ScanViewModel(
 
     private val _scanState = MutableStateFlow<ScanUiState>(ScanUiState.Pret)
     val scanState: StateFlow<ScanUiState> = _scanState.asStateFlow()
+
+    private val _seances = MutableStateFlow<List<Seance>>(
+        listOf(
+            Seance(101, "Algorithmique", "B2_IT", "2026-06-10", "08:00:00", "10:00:00", StatutSeance.EN_COURS),
+            Seance(102, "Réseaux", "B2_IT", "2026-06-10", "10:15:00", "12:15:00", StatutSeance.PLANIFIE),
+            Seance(103, "Base de données", "B2_IT", "2026-06-10", "13:30:00", "15:30:00", StatutSeance.PLANIFIE)
+        )
+    )
+    val seances: StateFlow<List<Seance>> = _seances.asStateFlow()
+
+    private val _activeSeance = MutableStateFlow<Seance?>(null)
+    val activeSeance: StateFlow<Seance?> = _activeSeance.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    fun selectSeance(seance: Seance) {
+        _activeSeance.value = seance
+    }
+
+    fun getSessionReport(seanceId: Int, callback: (com.ak.keycepass.shared.network.SessionStatusDto?) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val stats = repository.getStatistiquesSeance(seanceId)
+            val report = stats ?: com.ak.keycepass.shared.network.SessionStatusDto(
+                seanceId = seanceId,
+                totalInscrits = 25,
+                totalPresents = 18,
+                totalRetards = 3,
+                totalAbsents = 4,
+                cloture = true
+            )
+            callback(report)
+            _isLoading.value = false
+        }
+    }
+
+    fun exportDelegateReport(seanceId: Int, callback: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            delay(1000)
+            callback(true)
+            _isLoading.value = false
+        }
+    }
 
     // Identifiant de la séance en cours (mis à jour lors du premier scan)
     private var seanceIdCourant: Int? = null
