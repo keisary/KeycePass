@@ -4,8 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,11 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
 import com.ak.keycepass.desktop.util.generateQRBitmap
 import com.ak.keycepass.desktop.util.saveQRToFile
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+
+@OptIn(ExperimentalMaterial3Api::class)
 
 @Composable
 fun QRManagementScreen() {
@@ -35,6 +37,12 @@ fun QRManagementScreen() {
 
         Spacer(Modifier.height(24.dp))
 
+        // Utiliser le ViewModel pour les listes de classes/semestres
+        val vm = remember { AdminViewModel() }
+        val state by vm.state.collectAsState()
+        var classeDropdownExpanded by remember { mutableStateOf(false) }
+        var semestreDropdownExpanded by remember { mutableStateOf(false) }
+
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             // Panneau de configuration
             Card(
@@ -43,30 +51,62 @@ fun QRManagementScreen() {
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(Modifier.padding(24.dp).fillMaxWidth()) {
-                    Text("Générer un QR Code", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Generer un QR Code", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(20.dp))
 
+                    // ── Selecteur Classe ──
                     Text("Classe", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = selectedClasse,
-                        onValueChange = { selectedClasse = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = classeDropdownExpanded,
+                        onExpandedChange = { classeDropdownExpanded = !classeDropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedClasse,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classeDropdownExpanded) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(expanded = classeDropdownExpanded, onDismissRequest = { classeDropdownExpanded = false }) {
+                            state.classes.filter { it != "Toutes" }.forEach { c ->
+                                DropdownMenuItem(
+                                    text = { Text(c) },
+                                    onClick = { selectedClasse = c; classeDropdownExpanded = false }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(Modifier.height(16.dp))
 
+                    // ── Selecteur Semestre ──
                     Text("Semestre", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = selectedSemestre,
-                        onValueChange = { selectedSemestre = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = semestreDropdownExpanded,
+                        onExpandedChange = { semestreDropdownExpanded = !semestreDropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedSemestre,
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = semestreDropdownExpanded) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(expanded = semestreDropdownExpanded, onDismissRequest = { semestreDropdownExpanded = false }) {
+                            state.semestres.filter { it != "Tous" }.forEach { s ->
+                                DropdownMenuItem(
+                                    text = { Text(s) },
+                                    onClick = { selectedSemestre = s; semestreDropdownExpanded = false }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(Modifier.height(24.dp))
 

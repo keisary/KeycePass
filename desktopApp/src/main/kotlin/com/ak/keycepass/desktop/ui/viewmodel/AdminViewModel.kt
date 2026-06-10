@@ -10,7 +10,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// ── Modeles ──
+// ── Profil Enseignant ──
+
+data class TeacherProfile(
+    val nom: String = "Iruzen",
+    val prenom: String = "The Guy",
+    val email: String = "iruz3n@keyce.ci",
+    val matieres: List<String> = listOf("Ingenierie Logicielle", "Developpement Mobile"),
+    val matiereCourante: String = "Ingenierie Logicielle"
+)
+
+// ── Ligne de presence ──
 
 data class AttendanceRow(
     val id: Int,
@@ -24,6 +34,8 @@ data class AttendanceRow(
     val semestre: String = "S2_2026"
 )
 
+// ── Etat du Dashboard ──
+
 data class DashboardState(
     val presents: Int = 0,
     val lates: Int = 0,
@@ -33,10 +45,12 @@ data class DashboardState(
     val seanceStatut: StatutSeance = StatutSeance.PLANIFIE,
     val selectedClasse: String = "B2_IT",
     val selectedSemestre: String = "S2_2026",
-    val classes: List<String> = listOf("B2_IT", "B1_DEV", "B3_DATA"),
-    val semestres: List<String> = listOf("S1_2026", "S2_2026"),
-    val matiere: String = "Ingenierie Logicielle"
+    val classes: List<String> = listOf("Toutes", "B1_IT", "B1_MANAGEMENT", "B2_IT", "B2_MANAGEMENT", "B3_IT", "B3_MANAGEMENT"),
+    val semestres: List<String> = listOf("Tous", "S1_2025", "S2_2025", "S1_2026", "S2_2026"),
+    val enseignant: TeacherProfile = TeacherProfile()
 )
+
+// ── Entree historique ──
 
 data class HistoriqueEntry(
     val date: String,
@@ -58,23 +72,46 @@ class AdminViewModel {
     private val _liveEvents = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val liveEvents: SharedFlow<String> = _liveEvents.asSharedFlow()
 
-    // Donnees brutes (non filtrees)
-    private val allStudents = listOf(
-        Triple("Diallo", "Amadou", "B2-001"),
-        Triple("Kone", "Fatoumata", "B2-002"),
-        Triple("Traore", "Moussa", "B2-003"),
-        Triple("Camara", "Seydou", "B2-004"),
-        Triple("Bamba", "Kadiatou", "B2-005"),
-        Triple("Sissoko", "Ibrahim", "B2-006"),
-        Triple("Diop", "Mariama", "B2-007"),
-        Triple("Fofana", "Yacouba", "B2-008"),
-        Triple("Ndiaye", "Aminata", "B2-009"),
-        Triple("Toure", "Mamadou", "B2-010"),
-        Triple("Keita", "Aicha", "B2-011"),
-        Triple("Sow", "Ousmane", "B2-012")
+    // Banque d'etudiants par classe
+    private val classeData: Map<String, List<Triple<String, String, String>>> = mapOf(
+        "B1_IT" to listOf(
+            Triple("Konan", "Jean", "B1-001"), Triple("N'Guessan", "Marie", "B1-002"),
+            Triple("Kouame", "Paul", "B1-003"), Triple("Yao", "Sarah", "B1-004"),
+            Triple("Achi", "David", "B1-005"), Triple("Brou", "Esther", "B1-006"),
+            Triple("Tano", "Franck", "B1-007"), Triple("Gore", "Nadia", "B1-008"),
+        ),
+        "B1_MANAGEMENT" to listOf(
+            Triple("Koffi", "Alice", "B1M-001"), Triple("Zadi", "Brice", "B1M-002"),
+            Triple("Dadie", "Celia", "B1M-003"), Triple("Sahi", "Daniel", "B1M-004"),
+            Triple("Loba", "Elise", "B1M-005"), Triple("Goli", "Fidele", "B1M-006"),
+        ),
+        "B2_IT" to listOf(
+            Triple("Diallo", "Amadou", "B2-001"), Triple("Kone", "Fatoumata", "B2-002"),
+            Triple("Traore", "Moussa", "B2-003"), Triple("Camara", "Seydou", "B2-004"),
+            Triple("Bamba", "Kadiatou", "B2-005"), Triple("Sissoko", "Ibrahim", "B2-006"),
+            Triple("Diop", "Mariama", "B2-007"), Triple("Fofana", "Yacouba", "B2-008"),
+            Triple("Ndiaye", "Aminata", "B2-009"), Triple("Toure", "Mamadou", "B2-010"),
+            Triple("Keita", "Aicha", "B2-011"), Triple("Sow", "Ousmane", "B2-012"),
+        ),
+        "B2_MANAGEMENT" to listOf(
+            Triple("Ouattara", "Grace", "B2M-001"), Triple("Soro", "Herve", "B2M-002"),
+            Triple("Kouakou", "Irene", "B2M-003"), Triple("Ahou", "Jean-Marc", "B2M-004"),
+            Triple("Kassi", "Ketty", "B2M-005"), Triple("M'Boh", "Leo", "B2M-006"),
+            Triple("Adiko", "Mireille", "B2M-007"), Triple("Boni", "Noel", "B2M-008"),
+        ),
+        "B3_IT" to listOf(
+            Triple("Allou", "Olive", "B3-001"), Triple("Beka", "Patrick", "B3-002"),
+            Triple("Coulibaly", "Rachel", "B3-003"), Triple("Degny", "Serge", "B3-004"),
+            Triple("Ekra", "Therese", "B3-005"), Triple("Gbongue", "Ulrich", "B3-006"),
+        ),
+        "B3_MANAGEMENT" to listOf(
+            Triple("Hien", "Vanessa", "B3M-001"), Triple("Inza", "William", "B3M-002"),
+            Triple("Jah", "Xavier", "B3M-003"), Triple("Koua", "Yvette", "B3M-004"),
+        ),
     )
 
-    private var historique = listOf(
+    // Donnees historiques (partagees entre toutes les classes)
+    private val historique = listOf(
         HistoriqueEntry("03/06", "Sem 1 - Lun", 9, 1, 2, 12),
         HistoriqueEntry("04/06", "Sem 1 - Mar", 7, 3, 2, 12),
         HistoriqueEntry("05/06", "Sem 1 - Mer", 10, 1, 1, 12),
@@ -88,38 +125,34 @@ class AdminViewModel {
     fun getHistorique(): List<HistoriqueEntry> = historique
 
     private fun chargerDonnees() {
-        chargerDonneesMockees()
+        chargerDonneesMockees(_state.value.selectedClasse)
     }
 
-    private fun chargerDonneesMockees() {
-        val mockRows = allStudents.mapIndexed { index, (nom, prenom, matricule) ->
-            val statut = when (index) {
-                1 -> StatutFinal.RETARD
-                2 -> StatutFinal.ABSENT
-                4 -> StatutFinal.ABSENT
-                7 -> StatutFinal.RETARD
-                11 -> StatutFinal.ABSENT
+    private fun chargerDonneesMockees(classe: String) {
+        val etudiants = classeData[classe] ?: classeData["B2_IT"]!!
+        val mockRows = etudiants.mapIndexed { index, (nom, prenom, matricule) ->
+            val statut = when {
+                index % 7 == 3 -> StatutFinal.ABSENT
+                index % 5 == 2 -> StatutFinal.RETARD
+                index % 11 == 7 -> StatutFinal.ABSENT
                 else -> StatutFinal.PRESENT
             }
             val debut = when (statut) {
-                StatutFinal.PRESENT -> listOf("07:55", "07:58", "08:00", "08:02", "08:05", "08:08", "08:12")
-                    .getOrElse(index % 7) { "08:0${index % 9}" }
-                StatutFinal.RETARD -> listOf("08:18", "08:22")[index % 2]
+                StatutFinal.PRESENT -> listOf("07:55","07:58","08:00","08:02","08:05","08:08","08:12","08:15")
+                    .getOrElse(index % 8) { "08:0${index % 9}" }
+                StatutFinal.RETARD -> listOf("08:18","08:22","08:35")[index % 3]
                 else -> "---"
             }
             val fin = if (statut == StatutFinal.ABSENT) "---"
-            else listOf("09:58", "10:00", "10:01", "10:02", "10:03", "10:04", "10:05", "10:06", "10:07")
-                .getOrElse(index % 9) { "10:00" }
+            else listOf("09:50","09:55","09:58","10:00","10:01","10:02","10:03","10:04","10:05","10:06","10:07","10:10")
+                .getOrElse(index % 12) { "10:00" }
 
             AttendanceRow(
-                id = index + 1,
-                nom = nom, prenom = prenom, matricule = matricule,
+                id = index + 1, nom = nom, prenom = prenom, matricule = matricule,
                 statut = statut, heureScanDebut = debut, heureScanFin = fin,
-                classe = listOf("B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT", "B2_IT")[index],
-                semestre = "S2_2026"
+                classe = classe, semestre = _state.value.selectedSemestre
             )
         }
-
         appliquerFiltres(mockRows)
     }
 
@@ -171,8 +204,10 @@ class AdminViewModel {
     }
 
     fun filterByClasse(classe: String) {
-        _state.value = _state.value.copy(selectedClasse = classe)
-        appliquerFiltres()
+        if (classe != _state.value.selectedClasse) {
+            _state.value = _state.value.copy(selectedClasse = classe)
+            chargerDonneesMockees(classe)
+        }
     }
 
     fun filterBySemestre(semestre: String) {

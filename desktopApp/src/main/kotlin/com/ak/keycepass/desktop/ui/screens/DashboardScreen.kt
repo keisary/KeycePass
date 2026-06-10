@@ -113,7 +113,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            state.matiere,
+                            state.enseignant.matiereCourante,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
