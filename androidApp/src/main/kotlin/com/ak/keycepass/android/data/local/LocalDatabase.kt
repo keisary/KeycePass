@@ -1,6 +1,8 @@
 package com.ak.keycepass.android.data.local
 
+import android.content.Context
 import androidx.room.Database
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.ak.keycepass.android.data.local.dao.EmargementDao
 import com.ak.keycepass.android.data.local.dao.SeanceDao
@@ -20,4 +22,23 @@ import com.ak.keycepass.android.data.local.entities.SeanceLocal
 abstract class LocalDatabase : RoomDatabase() {
     abstract fun emargementDao(): EmargementDao
     abstract fun seanceDao(): SeanceDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: LocalDatabase? = null
+
+        fun getDatabase(context: Context): LocalDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    LocalDatabase::class.java,
+                    "keycepass_local_db"
+                )
+                .fallbackToDestructiveMigration()
+                .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
 }
