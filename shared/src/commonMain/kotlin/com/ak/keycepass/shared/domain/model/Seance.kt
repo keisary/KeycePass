@@ -1,25 +1,24 @@
 package com.ak.keycepass.shared.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
- * Représente une séance de cours dans le système KeycePass.
- * Conforme à la table Seance de la spécification de données (section 6.2).
+ * Représente une séance de cours au sein du système KeycePass.
+ * Basé sur la structure de la table 'Seance' du cahier des charges.
  */
-@Serializable
 data class Seance(
-    val idSeance: Int? = null,
-    val nomMatiere: String,
-    val classeId: String,
-    val dateJour: String, // Format AAAA-MM-JJ
-    val heureDebut: String, // Format HH:MM:SS
-    val heureFin: String, // Format HH:MM:SS
-    val statutSeance: StatutSeance
+    val idSeance: Int,           // Clé primaire de la séance (ex: 101)
+    val nomMatiere: String,      // Libellé du cours (ex: "Ingénierie Logicielle")
+    val classeId: String,        // Indexation de la classe cible (ex: "B2_IT")
+    val dateJour: String,        // Date de la séance au format AAAA-MM-JJ
+    val heureDebut: String,      // Heure de début officielle au format HH:MM:SS
+    val heureFin: String,        // Heure de fin officielle au format HH:MM:SS
+    val statutSeance: StatutSeance // L'état actuel de la séance (voir l'enum ci-dessous)
 )
 
-@Serializable
+/**
+ * Les trois états possibles d'une séance selon les exigences du projet.
+ */
 enum class StatutSeance {
-    PLANIFIE,
-    EN_COURS,
+    PLANIFIE, 
+    EN_COURS, 
     CLOTURE_ENSEIGNANT
 }

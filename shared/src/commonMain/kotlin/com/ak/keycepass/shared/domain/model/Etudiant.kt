@@ -1,17 +1,17 @@
 package com.ak.keycepass.shared.domain.model
 
-import kotlinx.serialization.Serializable
-
 /**
- * Représente un étudiant dans le système KeycePass.
- * Conforme à la table Etudiant de la spécification de données (section 6.2).
+ * Représente un étudiant au sein du système KeycePass.
+ * Basé sur la structure de la table 'Etudiant' du cahier des charges.
  */
-@Serializable
 data class Etudiant(
-    val idEtudiant: Int? = null,
-    val matricule: String,
-    val nom: String,
-    val prenom: String,
-    val classeId: String,
-    val deviceUuid: String? = null
+    val idEtudiant: Int = 0,        // Clé primaire (générée automatiquement par le système)
+    val matricule: String,         // Identifiant académique unique (ex: "MAT-12345")
+    val nom: String,               // Nom de famille
+    val prenom: String,            // Prénom
+    val classeId: String,          // Clé étrangère logique (ex: "B2_IT")
+    
+    // Le deviceUuid est "String?" (avec un point d'interrogation) car il peut être 
+    // nul au début, tant que l'étudiant n'a pas fait son premier scan d'enrôlement.
+    val deviceUuid: String? = null 
 )
