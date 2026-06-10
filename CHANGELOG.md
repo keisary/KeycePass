@@ -1,5 +1,22 @@
 # Changelog KeycePass
 
+## [2.2.0] — 2026-06-10 (Branche iruzen) — KPIs cliquables + Temps reel
+
+### Interface
+- **KPIs cliquables** : Presence / Retard / Absence filtrent le tableau en un clic
+- **Indicateur visuel** : carte KPI surlignee + bordure coloree quand le filtre est actif
+- **Reinitialisation** : clic sur Inscrits ou re-clic sur la meme categorie
+- **Profil simplifie** : juste "The Guy", plus de label "Enseignant" inutile
+
+### Temps reel
+- **Simulation auto** : demarree des l'ouverture du Dashboard (plus besoin de toggle)
+- Donnees mises a jour toutes les 5-15s
+
+### Technique
+- `DashboardState.statutFilter: StatutFinal?` pour le filtre statut
+- `filterByStatut()` dans AdminViewModel
+- `KpiCard` refactoree : parametres `isActive`, `onClick`, bordure conditionnelle
+
 ## [2.1.0] — 2026-06-10 (Branche iruzen) — Structure ecole + Profil enseignant
 
 ### Structure Ecole (B1/B2/B3 x IT/Management)
