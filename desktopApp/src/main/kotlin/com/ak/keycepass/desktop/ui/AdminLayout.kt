@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.res.painterResource
 import com.ak.keycepass.desktop.Screen
 import com.ak.keycepass.desktop.ui.screens.HistoriqueScreen
 import com.ak.keycepass.desktop.ui.theme.*
@@ -73,10 +76,15 @@ fun AdminLayout(
                         Surface(
                             modifier = Modifier.size(40.dp),
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.surface,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         ) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("KP", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                Image(
+                                    painter = painterResource("icons/keycepass_logo.png"),
+                                    contentDescription = "KeycePass",
+                                    modifier = Modifier.fillMaxSize().padding(2.dp)
+                                )
                             }
                         }
                         Spacer(Modifier.width(12.dp))
