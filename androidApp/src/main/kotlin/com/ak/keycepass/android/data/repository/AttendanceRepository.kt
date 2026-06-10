@@ -29,6 +29,7 @@ class AttendanceRepository(
     private val db: LocalDatabase,
     private val networkClient: NetworkClient
 ) {
+    private val etudiantDao = db.etudiantDao()
 
     // ─── US_01 : Enrôlement initial ──────────────────────────────────────────
 
@@ -68,6 +69,15 @@ class AttendanceRepository(
 
         // 3. Sauvegarder la session localement de façon chiffrée
         sessionManager.sauvegarderSession(matricule, deviceUuid, role, serverUrl)
+        // Sauvegarder l'étudiant en base locale pour suivi offline
+        etudiantDao.insert(
+            com.ak.keycepass.android.data.local.entities.EtudiantLocal(
+                matricule = matricule,
+                classeId = params["classeId"].orEmpty(),
+                deviceUuid = deviceUuid,
+                role = role.name
+            )
+        )
 
         EnrolementResult.Succes(role)
     }

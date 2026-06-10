@@ -49,20 +49,20 @@ object StatutUtils {
     private fun extractMinutes(str: String): Int {
         val timePart = when {
             str.contains("T") -> {
-                // ISO-8601: "2026-06-09T08:12:34.567" -> split on T and take first 8 chars of time component
                 val time = str.split("T")[1]
                 time.substring(0, minOf(8, time.length))
             }
             str.contains(" ") -> {
-                // "2026-06-10 08:05:23" -> split on space and take first 8 chars of time component
                 val time = str.split(" ")[1]
                 time.substring(0, minOf(8, time.length))
             }
             else -> str
         }
         val parts = timePart.split(":")
-        val hours = parts[0].toInt()
-        val minutes = parts[1].toInt()
+        val hours = parts[0].toIntOrNull() ?: 0
+        val minutes = parts.getOrNull(1)?.toIntOrNull() ?: 0
         return hours * 60 + minutes
     }
+
+    fun parseTimeToMinutes(str: String): Int = extractMinutes(str)
 }

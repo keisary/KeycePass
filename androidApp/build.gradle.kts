@@ -48,7 +48,7 @@ dependencies {
     implementation(libs.room.ktx)
     annotationProcessor(libs.room.compiler)
 
-    // EncryptedSharedPreferences (stockage sécurisé du rôle, matricule, UUID)
+    // EncryptedSharedPreferences
     implementation(libs.security.crypto)
 
     // Ktor Client (HTTP vers le serveur Ktor du poste Desktop)
@@ -60,6 +60,11 @@ dependencies {
     // Lifecycle + ViewModel
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.runtime)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+
+    // Jetpack Navigation
+    implementation(libs.navigation.compose)
 
     // Jetpack Compose
     implementation("androidx.compose.ui:ui:1.7.5")
@@ -68,6 +73,9 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.compose.ui:ui-tooling-preview:1.7.5")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+
+    // Material Icons Extended
+    implementation(libs.material.icons.extended)
 
     // ZXing QR Code Generation
     implementation(libs.zxing.core)

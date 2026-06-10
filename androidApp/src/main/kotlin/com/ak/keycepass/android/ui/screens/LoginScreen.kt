@@ -1,6 +1,5 @@
 package com.ak.keycepass.android.ui.screens
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,16 +25,18 @@ import com.ak.keycepass.android.ui.viewmodel.EnrolementViewModel
 @Composable
 fun LoginScreen(
     viewModel: EnrolementViewModel,
-    navController: NavController
+    navController: NavController,
+    onBackToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var matricule by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf<String?>(null) }
 
     // Listen to enrollment state
-    val state by viewModel.enrolementState.collectAsState()
+    val state by viewModel.enrolementState.collectAsStateWithLifecycle()
     LaunchedEffect(state) {
-        if (state is EnrolementUiState.Succes) {
+        val current = state
+        if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Succes) {
             navController.navigate("scan")
             viewModel.reinitialiser()
         }
@@ -45,21 +46,24 @@ fun LoginScreen(
         colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B))
     )
 
-    LaunchedEffect(matricule, selectedRole, state) {
-        if (state is EnrolementUiState.Erreur) {
-            Toast.makeText(context, (state as EnrolementUiState.Erreur).message, Toast.LENGTH_LONG).show()
+    LaunchedEffect(state) {
+        val current = state
+        if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Erreur) {
+            android.widget.Toast.makeText(context, current.message, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("KeycePass - Enrôlement", fontWeight = FontWeight.Bold, color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F172A))
+                title = { Text("KeycePass", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackToLogin) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                    }
+                }
             )
-        },
-        containerColor = Color.Transparent,
-        modifier = Modifier.background(gradientBackground)
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -108,28 +112,32 @@ fun LoginScreen(
             ) {
                 listOf("ETUDIANT", "DELEGUE", "ENSEIGNANT").forEach { role ->
                     val selected = selectedRole == role
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (selected) Color(0xFF312E81) else Color(0xFF1E293B)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(60.dp)
+                    androidx.compose.foundation.clickable(
+                        onClick = { selectedRole = role }
                     ) {
-                        androidx.compose.foundation.layout.Box(
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selected) Color(0xFF312E81) else Color(0xFF1E293B)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
+                                .weight(1f)
+                                .height(60.dp)
                         ) {
-                            Text(
-                                text = role,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selected) Color.White else Color(0xFF94A3B8),
-                                textAlign = TextAlign.Center
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = role,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selected) Color.White else Color(0xFF94A3B8),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
@@ -144,10 +152,10 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (state is EnrolementUiState.Chargement) {
+            if (state is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Chargement) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFF818CF8))
             } else {
-                // Primary action card
+                // Primary action
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF312E81)),
                     shape = RoundedCornerShape(12.dp),
@@ -155,11 +163,11 @@ fun LoginScreen(
                         .fillMaxWidth()
                         .height(56.dp)
                 ) {
-                    androidx.compose.foundation.layout.Box(
+                    Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        TextButton(
+                        androidx.compose.material3.TextButton(
                             onClick = {
                                 val role = selectedRole ?: "ETUDIANT"
                                 val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=http://192.168.1.10:8080&role=$role"
