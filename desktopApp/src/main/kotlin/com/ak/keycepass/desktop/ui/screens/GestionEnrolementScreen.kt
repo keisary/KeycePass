@@ -4,10 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,7 +47,7 @@ fun GestionEnrolementScreen() {
 
         Spacer(Modifier.height(8.dp))
         Text(
-            "Appareils couplés aux comptes étudiants",
+            "Appareils couples aux comptes etudiants",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -53,33 +56,24 @@ fun GestionEnrolementScreen() {
 
         // Stats rapides
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Appareils actifs", style = MaterialTheme.typography.labelMedium)
-                    Text("${devices.count { it.isActive }}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Inactifs / Dissociés", style = MaterialTheme.typography.labelMedium)
-                    Text("${devices.count { !it.isActive }}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-            Card(
-                modifier = Modifier.weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Total appareils", style = MaterialTheme.typography.labelMedium)
-                    Text("${devices.size}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                }
-            }
+            StatCard(
+                title = "Appareils actifs",
+                value = "${devices.count { it.isActive }}",
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Inactifs / Dissocies",
+                value = "${devices.count { !it.isActive }}",
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Total appareils",
+                value = "${devices.size}",
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Spacer(Modifier.height(24.dp))
@@ -110,6 +104,24 @@ fun GestionEnrolementScreen() {
 }
 
 @Composable
+private fun StatCard(
+    title: String,
+    value: String,
+    containerColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.labelMedium)
+            Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
 fun DeviceCard(device: PairedDevice, onReset: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -128,6 +140,16 @@ fun DeviceCard(device: PairedDevice, onReset: () -> Unit) {
         ) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (device.isActive) Icons.Default.PhoneAndroid else Icons.Default.DevicesOther,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (device.isActive)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(device.deviceName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Spacer(Modifier.width(8.dp))
                     Surface(
@@ -138,9 +160,10 @@ fun DeviceCard(device: PairedDevice, onReset: () -> Unit) {
                             MaterialTheme.colorScheme.errorContainer
                     ) {
                         Text(
-                            if (device.isActive) "✅ Actif" else "❌ Inactif",
+                            if (device.isActive) "Actif" else "Inactif",
                             fontSize = 11.sp,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
@@ -157,6 +180,12 @@ fun DeviceCard(device: PairedDevice, onReset: () -> Unit) {
                         MaterialTheme.colorScheme.primary
                 )
             ) {
+                Icon(
+                    if (device.isActive) Icons.Default.LinkOff else Icons.Default.Link,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(if (device.isActive) "Dissocier" else "Recoupler")
             }
         }

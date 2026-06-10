@@ -83,8 +83,8 @@ object ServerManager {
         }
 
         val ip = getLocalIp()
-        println("🚀 KeycePass Server démarré sur http://$ip:$port")
-        println("📡 WebSocket: ws://$ip:$port/ws/live")
+        println("[KeycePass] Server démarré sur http://$ip:$port")
+        println("[KeycePass] WebSocket: ws://$ip:$port/ws/live")
     }
 
     fun stop() {
@@ -92,7 +92,7 @@ object ServerManager {
         serverScope?.cancel()
         server = null
         serverScope = null
-        println("🛑 KeycePass Server arrêté")
+        println("[KeycePass] Server arrété")
     }
 
     private fun getLocalIp(): String {

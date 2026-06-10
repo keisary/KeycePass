@@ -60,8 +60,8 @@ fun App() {
     }
 }
 
-enum class Screen(val label: String, val icon: String) {
-    DASHBOARD("Dashboard", "📊"),
-    QR_MANAGEMENT("QR Codes", "📱"),
-    ENROLEMENT("Pairages", "🔐")
+enum class Screen(val label: String) {
+    DASHBOARD("Dashboard"),
+    QR_MANAGEMENT("QR Codes"),
+    ENROLEMENT("Pairages")
 }

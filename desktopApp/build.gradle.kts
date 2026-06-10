@@ -34,6 +34,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.swing)
+
+    // QR Code generation
+    implementation(libs.zxing.core)
 }
 
 application {

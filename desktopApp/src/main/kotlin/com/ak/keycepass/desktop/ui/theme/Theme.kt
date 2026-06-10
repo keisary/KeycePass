@@ -5,88 +5,98 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// ===== Palette KeycePass — Modern Education Theme =====
-// Bleu profond professionnel + accents vibrants
+// ============================================================
+// Palette KeycePass — "Nature Morte"
+// Inspiration : natures mortes classiques (Chardin, Cézanne)
+// Brun profond, olive, crème — couleurs posées, professionnelles
+// Palette volontairement limitée pour un rendu sophistiqué
+// ============================================================
 
-// Status colors
-val GreenPresent = Color(0xFF10B981)
-val GreenPresentBg = Color(0xFFD1FAE5)
-val YellowLate = Color(0xFFF59E0B)
-val YellowLateBg = Color(0xFFFEF3C7)
-val RedAbsent = Color(0xFFEF4444)
-val RedAbsentBg = Color(0xFFFEE2E2)
-val BlueInfo = Color(0xFF3B82F6)
-val BlueInfoBg = Color(0xFFDBEAFE)
-val PurpleAccent = Color(0xFF8B5CF6)
-val PurpleAccentBg = Color(0xFFEDE9FE)
+// ── Status (muted, élégants) ──
+val GreenPresent   = Color(0xFF4A7C59)   // Forest green
+val GreenPresentBg = Color(0xFFE8F0E8)   // Vert pâle chaud
+val YellowLate     = Color(0xFFB8860B)   // Dark goldenrod
+val YellowLateBg   = Color(0xFFF5EDD6)   // Jaune pâle
+val RedAbsent      = Color(0xFF8B3A3A)   // Brick red
+val RedAbsentBg    = Color(0xFFF5E0E0)   // Rouge pâle
+val BlueInfo       = Color(0xFF5B7B9A)   // Steel blue doux
+val BlueInfoBg     = Color(0xFFE0E8F0)
+val StatusPending  = Color(0xFF787878)   // Warm grey
 
-// Gradients
-val GradientBlue = listOf(Color(0xFF2563EB), Color(0xFF7C3AED))
-val GradientGreen = listOf(Color(0xFF059669), Color(0xFF10B981))
-val GradientOrange = listOf(Color(0xFFD97706), Color(0xFFF59E0B))
-val GradientRed = listOf(Color(0xFFDC2626), Color(0xFFEF4444))
-val GradientPurple = listOf(Color(0xFF7C3AED), Color(0xFF8B5CF6))
+// ── Surfaces (Light) ──
+val LightSurface1   = Color(0xFFF7F3ED)   // Crème chaud
+val LightSurface2   = Color(0xFFEDE4D4)   // Beige clair
+val LightSurface3   = Color(0xFFD8CFC0)   // Beige moyen
+val LightOnBg       = Color(0xFF2C2C2C)   // Charcoal
+val LightOnBgVar    = Color(0xFF5C5C5C)   // Gris chaud
 
-// Surface colors for dark theme (elegant glassmorphism)
-val DarkSurface1 = Color(0xFF1E1E2E)
-val DarkSurface2 = Color(0xFF2A2A3E)
-val DarkSurface3 = Color(0xFF363650)
-val LightSurface1 = Color(0xFFF8FAFC)
-val LightSurface2 = Color(0xFFF1F5F9)
-val LightSurface3 = Color(0xFFE2E8F0)
+// ── Surfaces (Dark) ──
+val DarkSurface1    = Color(0xFF1E1E1E)   // Deep charcoal
+val DarkSurface2    = Color(0xFF2C2C2C)
+val DarkSurface3    = Color(0xFF383838)
+val DarkOnBg        = Color(0xFFE0DCD4)
+val DarkOnBgVar     = Color(0xFFA89888)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF2563EB),          // Blue-600
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFDBEAFE), // Blue-100
-    onPrimaryContainer = Color(0xFF1E3A5F),
-    secondary = Color(0xFF7C3AED),        // Violet-600
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFEDE9FE),
-    onSecondaryContainer = Color(0xFF3B0764),
-    tertiary = Color(0xFF059669),         // Emerald-600
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD1FAE5),
-    onTertiaryContainer = Color(0xFF022C22),
-    error = Color(0xFFEF4444),
-    onError = Color.White,
-    errorContainer = Color(0xFFFEE2E2),
-    onErrorContainer = Color(0xFF450A0A),
-    background = LightSurface1,
-    onBackground = Color(0xFF0F172A),
-    surface = Color.White,
-    onSurface = Color(0xFF0F172A),
-    surfaceVariant = LightSurface2,
-    onSurfaceVariant = Color(0xFF475569),
-    outline = Color(0xFFCBD5E1),
-    outlineVariant = Color(0xFFE2E8F0)
+    primary            = Color(0xFF5D4037),       // Brown 700 — ancre
+    onPrimary          = Color.White,
+    primaryContainer   = Color(0xFFEDE4D4),
+    onPrimaryContainer = Color(0xFF3E2723),
+
+    secondary          = Color(0xFF6B8E5E),       // Olive/Sage
+    onSecondary        = Color.White,
+    secondaryContainer = Color(0xFFE8F0E4),
+    onSecondaryContainer = Color(0xFF2C4228),
+
+    tertiary           = Color(0xFF8B7355),       // Warm taupe
+    onTertiary         = Color.White,
+    tertiaryContainer  = Color(0xFFF0EBE0),
+    onTertiaryContainer = Color(0xFF3E3525),
+
+    error              = Color(0xFF8B3A3A),       // Brick
+    onError            = Color.White,
+    errorContainer     = Color(0xFFF5E0E0),
+    onErrorContainer   = Color(0xFF451A1A),
+
+    background         = LightSurface1,
+    onBackground       = LightOnBg,
+    surface            = Color.White,
+    onSurface          = LightOnBg,
+    surfaceVariant     = LightSurface2,
+    onSurfaceVariant   = LightOnBgVar,
+    outline            = Color(0xFFD8CFC0),
+    outlineVariant     = Color(0xFFEDE4D4)
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFF60A5FA),          // Blue-400
-    onPrimary = Color(0xFF0F172A),
-    primaryContainer = Color(0xFF1E3A5F),
-    onPrimaryContainer = Color(0xFFDBEAFE),
-    secondary = Color(0xFFA78BFA),        // Violet-400
-    onSecondary = Color(0xFF0F172A),
-    secondaryContainer = Color(0xFF3B0764),
-    onSecondaryContainer = Color(0xFFEDE9FE),
-    tertiary = Color(0xFF34D399),         // Emerald-400
-    onTertiary = Color(0xFF0F172A),
-    tertiaryContainer = Color(0xFF022C22),
-    onTertiaryContainer = Color(0xFFD1FAE5),
-    error = Color(0xFFF87171),
-    onError = Color(0xFF0F172A),
-    errorContainer = Color(0xFF450A0A),
-    onErrorContainer = Color(0xFFFEE2E2),
-    background = DarkSurface1,
-    onBackground = Color(0xFFE2E8F0),
-    surface = DarkSurface2,
-    onSurface = Color(0xFFE2E8F0),
-    surfaceVariant = DarkSurface3,
-    onSurfaceVariant = Color(0xFF94A3B8),
-    outline = Color(0xFF475569),
-    outlineVariant = Color(0xFF334155)
+    primary            = Color(0xFFA67C6E),       // Brown clair
+    onPrimary          = Color(0xFF3E2723),
+    primaryContainer   = Color(0xFF4A3328),
+    onPrimaryContainer = Color(0xFFEDE4D4),
+
+    secondary          = Color(0xFF8FB089),       // Sage clair
+    onSecondary        = Color(0xFF1A2E18),
+    secondaryContainer = Color(0xFF2C4228),
+    onSecondaryContainer = Color(0xFFE8F0E4),
+
+    tertiary           = Color(0xFFBFAA8F),       // Taupe clair
+    onTertiary         = Color(0xFF2C2418),
+    tertiaryContainer  = Color(0xFF4A3A28),
+    onTertiaryContainer = Color(0xFFF0EBE0),
+
+    error              = Color(0xFFC17070),       // Brick clair
+    onError            = Color(0xFF2C1010),
+    errorContainer     = Color(0xFF5C2020),
+    onErrorContainer   = Color(0xFFF5E0E0),
+
+    background         = DarkSurface1,
+    onBackground       = DarkOnBg,
+    surface            = DarkSurface2,
+    onSurface          = DarkOnBg,
+    surfaceVariant     = DarkSurface3,
+    onSurfaceVariant   = DarkOnBgVar,
+    outline            = Color(0xFF505050),
+    outlineVariant     = Color(0xFF383838)
 )
 
 @Composable

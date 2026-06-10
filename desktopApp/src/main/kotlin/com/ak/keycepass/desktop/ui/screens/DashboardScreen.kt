@@ -6,13 +6,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -22,7 +24,6 @@ import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
 import com.ak.keycepass.desktop.ui.viewmodel.AttendanceRow
 import com.ak.keycepass.shared.domain.model.StatutFinal
 import com.ak.keycepass.shared.domain.model.StatutSeance
-import androidx.compose.runtime.remember
 
 @Composable
 fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
@@ -54,8 +55,8 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                 shape = RoundedCornerShape(20.dp),
                 color = when (state.seanceStatut) {
                     StatutSeance.PLANIFIE -> MaterialTheme.colorScheme.surfaceVariant
-                    StatutSeance.EN_COURS -> GreenPresent.copy(alpha = 0.15f)
-                    StatutSeance.CLOTURE_ENSEIGNANT -> PurpleAccent.copy(alpha = 0.15f)
+                    StatutSeance.EN_COURS -> GreenPresent.copy(alpha = 0.12f)
+                    StatutSeance.CLOTURE_ENSEIGNANT -> BlueInfo.copy(alpha = 0.12f)
                 }
             ) {
                 Row(
@@ -68,9 +69,9 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             .clip(CircleShape)
                             .background(
                                 when (state.seanceStatut) {
-                                    StatutSeance.PLANIFIE -> Color.Gray
+                                    StatutSeance.PLANIFIE -> StatusPending
                                     StatutSeance.EN_COURS -> GreenPresent
-                                    StatutSeance.CLOTURE_ENSEIGNANT -> PurpleAccent
+                                    StatutSeance.CLOTURE_ENSEIGNANT -> BlueInfo
                                 }
                             )
                     )
@@ -86,7 +87,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                         color = when (state.seanceStatut) {
                             StatutSeance.PLANIFIE -> MaterialTheme.colorScheme.onSurfaceVariant
                             StatutSeance.EN_COURS -> GreenPresent
-                            StatutSeance.CLOTURE_ENSEIGNANT -> PurpleAccent
+                            StatutSeance.CLOTURE_ENSEIGNANT -> BlueInfo
                         }
                     )
                 }
@@ -100,36 +101,36 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GradientKPICard(
+            KpiCard(
                 title = "Présents",
                 value = state.presents,
                 subtitle = "${if (state.total > 0) (state.presents * 100 / state.total) else 0}%",
-                gradient = GradientGreen,
-                icon = "✅",
+                icon = Icons.Default.CheckCircle,
+                valueColor = GreenPresent,
                 modifier = Modifier.weight(1f)
             )
-            GradientKPICard(
+            KpiCard(
                 title = "Retards",
                 value = state.lates,
                 subtitle = "${if (state.total > 0) (state.lates * 100 / state.total) else 0}%",
-                gradient = GradientOrange,
-                icon = "⏳",
+                icon = Icons.Default.Schedule,
+                valueColor = YellowLate,
                 modifier = Modifier.weight(1f)
             )
-            GradientKPICard(
+            KpiCard(
                 title = "Absents",
                 value = state.absents,
                 subtitle = "${if (state.total > 0) (state.absents * 100 / state.total) else 0}%",
-                gradient = GradientRed,
-                icon = "❌",
+                icon = Icons.Default.Cancel,
+                valueColor = RedAbsent,
                 modifier = Modifier.weight(1f)
             )
-            GradientKPICard(
+            KpiCard(
                 title = "Inscrits",
                 value = state.total,
                 subtitle = "Total",
-                gradient = GradientPurple,
-                icon = "👥",
+                icon = Icons.Default.People,
+                valueColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -142,7 +143,6 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Filter chips row
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FilterChip(
                     selected = state.selectedClasse == "B2_IT",
@@ -176,7 +176,6 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                 )
             }
 
-            // Action buttons
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FilledTonalButton(
                     onClick = { viewModel.rafraichir() },
@@ -185,7 +184,11 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                     ),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("🔄", fontSize = 14.sp)
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Rafraîchir",
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text("Rafraîchir", fontSize = 13.sp)
                 }
@@ -199,7 +202,11 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("🔒", fontSize = 14.sp)
+                        Icon(
+                            Icons.Default.Lock,
+                            contentDescription = "Clôturer",
+                            modifier = Modifier.size(16.dp)
+                        )
                         Spacer(Modifier.width(8.dp))
                         Text("Clôturer", fontSize = 13.sp)
                     }
@@ -209,7 +216,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
         Spacer(Modifier.height(16.dp))
 
-        // ===== STATS BAR (mini progress) =====
+        // ===== STATS BAR =====
         if (state.total > 0) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -225,21 +232,21 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                         .weight(presentPct.coerceAtLeast(0.01f))
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(GreenPresent.copy(alpha = 0.3f))
+                        .background(GreenPresent.copy(alpha = 0.25f))
                 )
                 Box(
                     modifier = Modifier
                         .weight(latePct.coerceAtLeast(0.01f))
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(YellowLate.copy(alpha = 0.3f))
+                        .background(YellowLate.copy(alpha = 0.25f))
                 )
                 Box(
                     modifier = Modifier
                         .weight(absentPct.coerceAtLeast(0.01f))
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(RedAbsent.copy(alpha = 0.3f))
+                        .background(RedAbsent.copy(alpha = 0.25f))
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -292,7 +299,6 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                     thickness = 1.dp
                 )
 
-                // Table rows
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(state.rows, key = { it.id }) { row ->
                         AttendanceRowItem(row)
@@ -308,71 +314,57 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 }
 
 @Composable
-fun GradientKPICard(
+fun KpiCard(
     title: String,
     value: Int,
     subtitle: String,
-    gradient: List<Color>,
-    icon: String,
+    icon: ImageVector,
+    valueColor: Color,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier.height(130.dp),
         shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 2.dp
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = gradient.map { it.copy(alpha = 0.9f) }
-                    )
-                )
+        Column(
+            modifier = Modifier.fillMaxSize().padding(18.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(18.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 13.sp
-                    )
-                    Text(icon, fontSize = 20.sp)
-                }
-
-                Column {
-                    Text(
-                        "$value",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        fontSize = 32.sp
-                    )
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 13.sp
+                )
+                Icon(
+                    icon,
+                    contentDescription = title,
+                    tint = valueColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
-            // Decorative circle (glassmorphism)
-            Surface(
-                modifier = Modifier
-                    .size(80.dp)
-                    .align(Alignment.BottomEnd)
-                    .offset(x = 20.dp, y = 20.dp),
-                shape = CircleShape,
-                color = Color.White.copy(alpha = 0.08f)
-            ) {}
+            Column {
+                Text(
+                    "$value",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = valueColor,
+                    fontSize = 32.sp
+                )
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -383,7 +375,7 @@ fun AttendanceRowItem(row: AttendanceRow) {
         StatutFinal.PRESENT -> GreenPresent
         StatutFinal.RETARD -> YellowLate
         StatutFinal.ABSENT -> RedAbsent
-        StatutFinal.EN_ATTENTE -> Color.Gray
+        StatutFinal.EN_ATTENTE -> StatusPending
     }
     val statutBg = when (row.statut) {
         StatutFinal.PRESENT -> GreenPresentBg
@@ -408,15 +400,12 @@ fun AttendanceRowItem(row: AttendanceRow) {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ID
         Text(
             "${row.id}",
             Modifier.width(36.dp),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        // Matricule
         Text(
             row.matricule,
             Modifier.width(100.dp),
@@ -424,8 +413,6 @@ fun AttendanceRowItem(row: AttendanceRow) {
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
-
-        // Name
         Column(Modifier.weight(1f)) {
             Text(
                 "${row.nom} ${row.prenom}",
@@ -463,7 +450,6 @@ fun AttendanceRowItem(row: AttendanceRow) {
             }
         }
 
-        // Scan times
         Text(
             row.heureScanDebut,
             Modifier.width(90.dp),
