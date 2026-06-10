@@ -10,30 +10,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.ak.keycepass.desktop.ui.screens.DashboardScreen
-import com.ak.keycepass.desktop.ui.screens.GestionEnrolementScreen
-import com.ak.keycepass.desktop.ui.screens.QRManagementScreen
 import com.ak.keycepass.desktop.ui.AdminLayout
 import com.ak.keycepass.desktop.ui.theme.KeycePassTheme
 import kotlinx.coroutines.launch
 
-// Point d'entrée de l'application desktop KeycePass
 fun main() = application {
     val appScope = rememberCoroutineScope()
 
-    // Démarrage du serveur Ktor embarqué
     LaunchedEffect(Unit) {
         ServerManager.start()
     }
 
     Window(
         onCloseRequest = {
-            appScope.launch {
-                ServerManager.stop()
-            }
+            appScope.launch { ServerManager.stop() }
             exitApplication()
         },
-        title = "KeycePass — Administration",
+        title = "KeycePass - Administration",
         state = rememberWindowState(size = DpSize(1280.dp, 800.dp))
     ) {
         KeycePassTheme {
@@ -51,17 +44,12 @@ fun App() {
     AdminLayout(
         currentScreen = currentScreen,
         onNavigate = { currentScreen = it }
-    ) {
-        when (currentScreen) {
-            Screen.DASHBOARD -> DashboardScreen()
-            Screen.QR_MANAGEMENT -> QRManagementScreen()
-            Screen.ENROLEMENT -> GestionEnrolementScreen()
-        }
-    }
+    )
 }
 
 enum class Screen(val label: String) {
     DASHBOARD("Dashboard"),
     QR_MANAGEMENT("QR Codes"),
-    ENROLEMENT("Pairages")
+    ENROLEMENT("Pairages"),
+    HISTORIQUE("Historique")
 }
