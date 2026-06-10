@@ -19,7 +19,7 @@ import kotlinx.serialization.Serializable
  * L'URL de base est extraite du QR Code d'enrôlement et stockée dans [SessionManager].
  * Format attendu : "http://192.168.1.10:8080" (IP du PC sur le réseau ou adresse internet).
  */
-class NetworkClient(private val serverBaseUrl: String) {
+class NetworkClient(var serverBaseUrl: String) {
 
     private val client = HttpClient(OkHttp) {
         install(ContentNegotiation) {
