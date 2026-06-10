@@ -49,8 +49,9 @@ fun AdminLayout(
                     when (event.key) {
                         Key.One -> { onNavigate(Screen.DASHBOARD); true }
                         Key.Two -> { onNavigate(Screen.QR_MANAGEMENT); true }
-                        Key.Three -> { onNavigate(Screen.ENROLEMENT); true }
-                        Key.Four -> { onNavigate(Screen.HISTORIQUE); true }
+                        Key.Three -> { onNavigate(Screen.ETUDIANTS); true }
+                        Key.Four -> { onNavigate(Screen.ENROLEMENT); true }
+                        Key.Five -> { onNavigate(Screen.HISTORIQUE); true }
                         Key.K -> { cmdPaletteOpen = true; true }
                         else -> false
                     }
@@ -114,6 +115,7 @@ fun AdminLayout(
                     val navItems = buildList {
                         add(NavItem(Screen.DASHBOARD, Icons.Default.Dashboard, "Dashboard"))
                         add(NavItem(Screen.QR_MANAGEMENT, Icons.Default.QrCodeScanner, "QR Codes"))
+                        add(NavItem(Screen.ETUDIANTS, Icons.Default.People, "Étudiants"))
                         add(NavItem(Screen.ENROLEMENT, Icons.Default.PhoneAndroid, "Pairages"))
                         add(NavItem(Screen.HISTORIQUE, Icons.Default.BarChart, "Historique"))
                     }
@@ -208,6 +210,7 @@ fun AdminLayout(
                                 when (currentScreen) {
                                     Screen.DASHBOARD -> "Dashboard"
                                     Screen.QR_MANAGEMENT -> "Gestion des QR Codes"
+                                    Screen.ETUDIANTS -> "Gestion des Étudiants"
                                     Screen.ENROLEMENT -> "Pairage des appareils"
                                     Screen.HISTORIQUE -> "Historique et Statistiques"
                                 },
@@ -272,6 +275,7 @@ fun AdminLayout(
                         when (screen) {
                             Screen.DASHBOARD -> com.ak.keycepass.desktop.ui.screens.DashboardScreen()
                             Screen.QR_MANAGEMENT -> com.ak.keycepass.desktop.ui.screens.QRManagementScreen()
+                            Screen.ETUDIANTS -> com.ak.keycepass.desktop.ui.screens.EtudiantsScreen()
                             Screen.ENROLEMENT -> com.ak.keycepass.desktop.ui.screens.GestionEnrolementScreen()
                             Screen.HISTORIQUE -> com.ak.keycepass.desktop.ui.screens.HistoriqueScreen()
                         }
@@ -410,6 +414,7 @@ private fun CommandPalette(
                                     imageVector = when (screen) {
                                         Screen.DASHBOARD -> Icons.Default.Dashboard
                                         Screen.QR_MANAGEMENT -> Icons.Default.QrCodeScanner
+                                        Screen.ETUDIANTS -> Icons.Default.People
                                         Screen.ENROLEMENT -> Icons.Default.PhoneAndroid
                                         Screen.HISTORIQUE -> Icons.Default.BarChart
                                     },
@@ -421,11 +426,12 @@ private fun CommandPalette(
                                 Text(screen.label, fontSize = 14.sp)
                                 Spacer(Modifier.weight(1f))
                                 Text(
-                                    when (screen) {
+                                    text = when (screen) {
                                         Screen.DASHBOARD -> "Ctrl+1"
                                         Screen.QR_MANAGEMENT -> "Ctrl+2"
-                                        Screen.ENROLEMENT -> "Ctrl+3"
-                                        Screen.HISTORIQUE -> "Ctrl+4"
+                                        Screen.ETUDIANTS -> "Ctrl+3"
+                                        Screen.ENROLEMENT -> "Ctrl+4"
+                                        Screen.HISTORIQUE -> "Ctrl+5"
                                     },
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
