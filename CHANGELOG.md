@@ -1,5 +1,25 @@
 # Changelog KeycePass
 
+## [2.1.0] — 2026-06-10 (Branche iruzen) — Structure ecole + Profil enseignant
+
+### Structure Ecole (B1/B2/B3 x IT/Management)
+- **6 classes** : B1_IT, B1_MANAGEMENT, B2_IT, B2_MANAGEMENT, B3_IT, B3_MANAGEMENT
+- Données mockées pour chaque classe (4-12 étudiants par classe, 50+ au total)
+- Filtres : "Toutes" + les 6 classes, "Tous" + 5 semestres
+- Dashboard : changement de classe → recharge les données de cette classe
+- QR Management : dropdown selecteurs (classe + semestre) au lieu de textfields
+
+### Profil Enseignant
+- **Sidebar** : avatar "TG" + nom "The Guy Iruzen" + role "Enseignant" + statut vert
+- **Top bar** : affiche "Seance de The Guy Iruzen" en sous-titre
+- **Dashboard** : matiere depuis le TeacherProfile (Ingenierie Logicielle)
+- Données enseignant dans TeacherProfile (nom, prenom, email, matieres)
+
+### Corrections
+- Barre de recherche non fonctionnelle en bas à gauche → remplacée par le profil admin
+- `matiere` champ supprimé de DashboardState, remplacé par `enseignant.matiereCourante`
+- AdminViewModel : données par classe (classeData map), sélection de classe fonctionnelle
+
 ## [2.0.0] — 2026-06-10 (Branche iruzen) — Monochrome
 
 ### Theme Noir & Blanc (Linear/Stripe style)
