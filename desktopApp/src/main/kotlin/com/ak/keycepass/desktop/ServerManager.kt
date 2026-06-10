@@ -28,6 +28,8 @@ object ServerManager {
     private val _updates = MutableSharedFlow<String>(extraBufferCapacity = 64)
     val updates: SharedFlow<String> = _updates.asSharedFlow()
 
+    fun isRunning(): Boolean = server != null
+
     fun start(port: Int = 8080, host: String = "0.0.0.0") {
         if (server != null) return
 

@@ -13,6 +13,8 @@ data class AttendanceRow(
     val nom: String,
     val prenom: String,
     val matricule: String,
+    val classe: String = "B2_IT",
+    val semestre: String = "S2_2026",
     val statut: StatutFinal,
     val heureScanDebut: String,
     val heureScanFin: String
@@ -28,7 +30,7 @@ data class DashboardState(
     val seanceStatut: StatutSeance = StatutSeance.PLANIFIE,
     val selectedClasse: String = "B2_IT",
     val selectedSemestre: String = "S2_2026",
-    val matiere: String = "Ingénierie Logicielle"
+    val matiere: String = "Informatique"
 )
 
 class AdminViewModel {
@@ -37,50 +39,63 @@ class AdminViewModel {
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
+    // Données brutes (toutes classes confondues)
+    private val allRows = listOf(
+        AttendanceRow(1, "Diallo", "Amadou", "B2-001", "B2_IT", "S2_2026", StatutFinal.PRESENT, "08:12", "10:05"),
+        AttendanceRow(2, "Koné", "Fatoumata", "B2-002", "B2_IT", "S2_2026", StatutFinal.RETARD, "08:22", "10:03"),
+        AttendanceRow(3, "Traoré", "Moussa", "B2-003", "B2_IT", "S2_2026", StatutFinal.ABSENT, "---", "---"),
+        AttendanceRow(4, "Camara", "Seydou", "B2-004", "B2_IT", "S2_2026", StatutFinal.PRESENT, "07:58", "10:01"),
+        AttendanceRow(5, "Bamba", "Kadiatou", "B2-005", "B2_IT", "S2_2026", StatutFinal.ABSENT, "08:10", "---"),
+        AttendanceRow(6, "Sissoko", "Ibrahim", "B2-006", "B2_IT", "S2_2026", StatutFinal.PRESENT, "08:05", "10:02"),
+        AttendanceRow(7, "Diop", "Mariama", "B2-007", "B2_IT", "S2_2026", StatutFinal.PRESENT, "07:55", "10:00"),
+        AttendanceRow(8, "Fofana", "Yacouba", "B2-008", "B2_IT", "S2_2026", StatutFinal.RETARD, "08:18", "10:06"),
+        AttendanceRow(9, "Ndiaye", "Aminata", "B2-009", "B2_IT", "S2_2026", StatutFinal.PRESENT, "08:02", "10:04"),
+        AttendanceRow(10, "Touré", "Mamadou", "B2-010", "B2_IT", "S2_2026", StatutFinal.PRESENT, "08:00", "09:58"),
+        AttendanceRow(11, "Keita", "Aïcha", "B2-011", "B2_IT", "S2_2026", StatutFinal.PRESENT, "08:08", "10:07"),
+        AttendanceRow(12, "Sow", "Ousmane", "B2-012", "B2_IT", "S2_2026", StatutFinal.ABSENT, "---", "---"),
+    )
+
     init {
         chargerDonneesMockees()
     }
 
     private fun chargerDonneesMockees() {
-        val mockRows = listOf(
-            AttendanceRow(1, "Diallo", "Amadou", "B2-001", StatutFinal.PRESENT, "08:12", "10:05"),
-            AttendanceRow(2, "Koné", "Fatoumata", "B2-002", StatutFinal.RETARD, "08:22", "10:03"),
-            AttendanceRow(3, "Traoré", "Moussa", "B2-003", StatutFinal.ABSENT, "---", "---"),
-            AttendanceRow(4, "Camara", "Seydou", "B2-004", StatutFinal.PRESENT, "07:58", "10:01"),
-            AttendanceRow(5, "Bamba", "Kadiatou", "B2-005", StatutFinal.ABSENT, "08:10", "---"),
-            AttendanceRow(6, "Sissoko", "Ibrahim", "B2-006", StatutFinal.PRESENT, "08:05", "10:02"),
-            AttendanceRow(7, "Diop", "Mariama", "B2-007", StatutFinal.PRESENT, "07:55", "10:00"),
-            AttendanceRow(8, "Fofana", "Yacouba", "B2-008", StatutFinal.RETARD, "08:18", "10:06"),
-            AttendanceRow(9, "Ndiaye", "Aminata", "B2-009", StatutFinal.PRESENT, "08:02", "10:04"),
-            AttendanceRow(10, "Touré", "Mamadou", "B2-010", StatutFinal.PRESENT, "08:00", "09:58"),
-            AttendanceRow(11, "Keita", "Aïcha", "B2-011", StatutFinal.PRESENT, "08:08", "10:07"),
-            AttendanceRow(12, "Sow", "Ousmane", "B2-012", StatutFinal.ABSENT, "---", "---"),
-        )
+        appliquerFiltres()
+    }
 
-        val presents = mockRows.count { it.statut == StatutFinal.PRESENT }
-        val lates = mockRows.count { it.statut == StatutFinal.RETARD }
-        val absents = mockRows.count { it.statut == StatutFinal.ABSENT }
+    private fun appliquerFiltres() {
+        val currentState = _state.value
+        val filtered = allRows.filter { row ->
+            row.classe == currentState.selectedClasse &&
+            row.semestre == currentState.selectedSemestre
+        }
 
-        _state.value = DashboardState(
+        val presents = filtered.count { it.statut == StatutFinal.PRESENT }
+        val lates = filtered.count { it.statut == StatutFinal.RETARD }
+        val absents = filtered.count { it.statut == StatutFinal.ABSENT }
+
+        _state.value = currentState.copy(
             presents = presents,
             lates = lates,
             absents = absents,
-            total = mockRows.size,
-            rows = mockRows,
+            total = filtered.size,
+            rows = filtered,
             seanceStatut = StatutSeance.EN_COURS
         )
     }
 
     fun filterByClasse(classe: String) {
         _state.value = _state.value.copy(selectedClasse = classe)
+        appliquerFiltres()
     }
 
     fun filterBySemestre(semestre: String) {
         _state.value = _state.value.copy(selectedSemestre = semestre)
+        appliquerFiltres()
     }
 
     fun rafraichir() {
-        chargerDonneesMockees()
+        appliquerFiltres()
     }
 
     fun cloturerSeance() {

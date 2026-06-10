@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ak.keycepass.desktop.Screen
+import com.ak.keycepass.desktop.ServerManager
 import com.ak.keycepass.desktop.ui.theme.*
 
 @Composable
@@ -28,6 +29,16 @@ fun AdminLayout(
     onNavigate: (Screen) -> Unit,
     content: @Composable () -> Unit
 ) {
+    var serverOnline by remember { mutableStateOf(ServerManager.isRunning()) }
+
+    // Vérification périodique du statut serveur
+    LaunchedEffect(Unit) {
+        while (true) {
+            serverOnline = ServerManager.isRunning()
+            kotlinx.coroutines.delay(5000)
+        }
+    }
+
     Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // ===== SIDEBAR =====
         Surface(
@@ -135,10 +146,15 @@ fun AdminLayout(
                 Spacer(Modifier.weight(1f))
 
                 // ===== Server Status Badge =====
+                val statusColor = if (serverOnline) GreenPresent else RedAbsent
+                val statusBg = if (serverOnline) GreenPresent.copy(alpha = 0.1f) else RedAbsent.copy(alpha = 0.1f)
+                val statusLabel = if (serverOnline) "Serveur actif" else "Serveur arrêté"
+                val portLabel = if (serverOnline) "Port 8080" else "Hors ligne"
+
                 Surface(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = GreenPresent.copy(alpha = 0.1f),
+                    color = statusBg,
                     tonalElevation = 0.dp
                 ) {
                     Row(
@@ -149,18 +165,18 @@ fun AdminLayout(
                             modifier = Modifier
                                 .size(10.dp)
                                 .clip(CircleShape)
-                                .background(GreenPresent)
+                                .background(statusColor)
                         )
                         Spacer(Modifier.width(8.dp))
                         Column {
                             Text(
-                                "Serveur actif",
+                                statusLabel,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = GreenPresent
+                                color = statusColor
                             )
                             Text(
-                                "Port 8080",
+                                portLabel,
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

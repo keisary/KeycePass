@@ -14,6 +14,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ak.keycepass.desktop.util.generateQRBitmap
+import com.ak.keycepass.desktop.util.saveQRToFile
+import java.io.File
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 
 @Composable
 fun QRManagementScreen() {
@@ -130,7 +134,21 @@ fun QRManagementScreen() {
                         Spacer(Modifier.height(12.dp))
 
                         OutlinedButton(
-                            onClick = { /* Export PNG — à implémenter */ }
+                            onClick = {
+                                val content = "keycepass://attendance?class=${selectedClasse}:sem:${selectedSemestre}"
+                                val chooser = JFileChooser().apply {
+                                    dialogTitle = "Exporter le QR Code"
+                                    selectedFile = File("QR_${selectedClasse}_${selectedSemestre}.png")
+                                    fileFilter = FileNameExtensionFilter("Images PNG (*.png)", "png")
+                                }
+                                if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                                    var file = chooser.selectedFile
+                                    if (!file.name.endsWith(".png")) {
+                                        file = File(file.absolutePath + ".png")
+                                    }
+                                    saveQRToFile(content, file)
+                                }
+                            }
                         ) {
                             Icon(
                                 Icons.Default.Download,
