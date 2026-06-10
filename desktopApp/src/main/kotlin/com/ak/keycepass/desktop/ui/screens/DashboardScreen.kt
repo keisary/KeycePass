@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,9 +18,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,7 +34,10 @@ import com.ak.keycepass.desktop.ui.viewmodel.AttendanceRow
 import com.ak.keycepass.shared.domain.model.StatutFinal
 import com.ak.keycepass.shared.domain.model.StatutSeance
 import kotlinx.coroutines.delay
-import kotlin.math.roundToInt
+import java.io.File
+import java.io.FileWriter
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
 
 // ── Dashboard ──
 
@@ -39,6 +47,10 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
     var toastMessage by remember { mutableStateOf("") }
     var toastVisible by remember { mutableStateOf(false) }
+
+    // Recherche
+    var searchQuery by remember { mutableStateOf("") }
+    val focusReq = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         viewModel.liveEvents.collect { event ->
@@ -54,6 +66,42 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
             while (true) {
                 delay(5000 + (Math.random() * 10000).toLong())
                 viewModel.simulateArrivee()
+            }
+        }
+    }
+
+    // Filtre local par recherche
+    val filteredRows = remember(state.rows, searchQuery) {
+        if (searchQuery.isBlank()) state.rows
+        else state.rows.filter { row ->
+            row.nom.contains(searchQuery, ignoreCase = true) ||
+            row.prenom.contains(searchQuery, ignoreCase = true) ||
+            row.matricule.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    fun exportCSV() {
+        val chooser = JFileChooser().apply {
+            dialogTitle = "Exporter les presences"
+            fileFilter = FileNameExtensionFilter("Fichier CSV", "csv")
+            selectedFile = File("presences_${java.time.LocalDate.now()}.csv")
+        }
+        if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+            var path = chooser.selectedFile.absolutePath
+            if (!path.endsWith(".csv")) path += ".csv"
+            try {
+                FileWriter(path).use { w ->
+                    w.write("N;Nom;Prenom;Matricule;Statut;Arrivee;Depart;Classe\n")
+                    state.rows.forEachIndexed { i, r ->
+                        w.write("${i + 1};${r.nom};${r.prenom};${r.matricule};" +
+                            "${r.statut.name};${r.heureScanDebut};${r.heureScanFin};${r.classe}\n")
+                    }
+                }
+                toastMessage = "Exporter : ${File(path).name}"
+                toastVisible = true
+            } catch (e: Exception) {
+                toastMessage = "Erreur export : ${e.message}"
+                toastVisible = true
             }
         }
     }
@@ -141,7 +189,6 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
             // ── KPIs compacts + Filtres sur UNE ligne ──
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                // KPIs
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     KpiMini(state.presents, Icons.Default.CheckCircle, StatusPresent,
                         isActive = state.statutFilter == StatutFinal.PRESENT,
@@ -158,7 +205,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
                 Spacer(Modifier.width(8.dp))
 
-                // Actions : classe / semestre / refresh / cloture
+                // Actions : search / classe / semestre / refresh / export / cloture
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -182,7 +229,6 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             )
                         }
 
-                        // Separator
                         Box(Modifier.width(1.dp).height(18.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)))
 
                         state.semestres.forEach { s ->
@@ -217,6 +263,11 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        // Export CSV
+                        IconButton(onClick = { exportCSV() }, modifier = Modifier.size(26.dp)) {
+                            Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         if (state.seanceStatut == StatutSeance.EN_COURS) {
                             IconButton(onClick = { viewModel.cloturerSeance() }, modifier = Modifier.size(26.dp)) {
                                 Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp),
@@ -227,7 +278,32 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
+
+            // ── Barre de recherche ──
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().height(36.dp).focusRequester(focusReq),
+                placeholder = { Text("Rechercher un etudiant...", fontSize = 12.sp) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                trailingIcon = if (searchQuery.isNotEmpty()) {
+                    { IconButton(onClick = { searchQuery = ""; focusReq.requestFocus() }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Clear, contentDescription = null, modifier = Modifier.size(14.dp))
+                    } }
+                } else null,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall,
+                shape = RoundedCornerShape(8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusReq.freeFocus() })
+            )
+
+            Spacer(Modifier.height(8.dp))
 
             // ── Tableau des presences ──
             Card(
@@ -258,17 +334,21 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), thickness = 1.dp)
 
                     LazyColumn(Modifier.fillMaxSize()) {
-                        items(state.rows, key = { it.id }) { row ->
+                        items(filteredRows, key = { it.id }) { row ->
                             StudentRow(row)
                         }
-                        if (state.rows.isEmpty()) {
+                        if (filteredRows.isEmpty()) {
                             item {
                                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(Icons.Default.SearchOff, contentDescription = null,
+                                        Icon(if (searchQuery.isNotEmpty()) Icons.Default.SearchOff else Icons.Default.PeopleOutline,
+                                            contentDescription = null,
                                             modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                                         Spacer(Modifier.height(6.dp))
-                                        Text("Aucune donnee", fontSize = 13.sp,
+                                        Text(
+                                            if (searchQuery.isNotEmpty()) "Aucun resultat pour \"$searchQuery\""
+                                            else "Aucune donnee",
+                                            fontSize = 13.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                     }
                                 }

@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +21,10 @@ import com.ak.keycepass.desktop.ui.theme.*
 import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
 import com.ak.keycepass.desktop.ui.viewmodel.HistoriqueEntry
 import com.ak.keycepass.desktop.ui.viewmodel.PeriodeStats
+import java.io.FileWriter
+import javax.swing.JFileChooser
+import javax.swing.filechooser.FileNameExtensionFilter
+import java.io.File
 
 @Composable
 fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
@@ -52,7 +58,7 @@ fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) 
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
             ) {
-                Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                     PeriodeStats.entries.forEach { p ->
                         FilterChip(
                             selected = currentPeriode == p,
@@ -76,6 +82,11 @@ fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) 
                             ),
                             modifier = Modifier.height(28.dp)
                         )
+                    }
+                    Box(Modifier.width(1.dp).height(18.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)))
+                    IconButton(onClick = { exportCSV(entries) }, modifier = Modifier.size(26.dp)) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -196,5 +207,25 @@ private fun LegendDot(color: Color, label: String) {
         Box(Modifier.size(7.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(5.dp))
         Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun exportCSV(entries: List<HistoriqueEntry>) {
+    val chooser = JFileChooser().apply {
+        dialogTitle = "Exporter l'historique"
+        fileFilter = FileNameExtensionFilter("Fichier CSV", "csv")
+        selectedFile = File("historique_${java.time.LocalDate.now()}.csv")
+    }
+    if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+        var path = chooser.selectedFile.absolutePath
+        if (!path.endsWith(".csv")) path += ".csv"
+        try {
+            FileWriter(path).use { w ->
+                w.write("Date;Label;Presents;Retards;Absents;Total\n")
+                entries.forEach { e ->
+                    w.write("${e.date};${e.label};${e.presents};${e.retards};${e.absents};${e.total}\n")
+                }
+            }
+        } catch (_: Exception) {}
     }
 }
