@@ -8,6 +8,10 @@ plugins {
     application
 }
 
+application {
+    mainClass.set("com.ak.keycepass.desktop.MainKt")
+}
+
 group = "com.ak.keycepass"
 version = "1.0.0"
 
