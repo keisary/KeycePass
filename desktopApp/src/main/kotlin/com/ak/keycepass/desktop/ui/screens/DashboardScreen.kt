@@ -1,13 +1,12 @@
 package com.ak.keycepass.desktop.ui.screens
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ak.keycepass.desktop.ui.theme.*
@@ -29,49 +29,9 @@ import com.ak.keycepass.desktop.ui.viewmodel.AttendanceRow
 import com.ak.keycepass.shared.domain.model.StatutFinal
 import com.ak.keycepass.shared.domain.model.StatutSeance
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
-// ── Toast notification ──
-
-@Composable
-private fun LiveToast(message: String, visible: Boolean, onDismiss: () -> Unit) {
-    androidx.compose.animation.AnimatedVisibility(
-        visible = visible,
-        enter = androidx.compose.animation.slideInVertically { -it } + androidx.compose.animation.fadeIn(),
-        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it },
-        modifier = Modifier.offset { androidx.compose.ui.unit.IntOffset(0, 0) }
-    ) {
-        LaunchedEffect(Unit) {
-            delay(3000)
-            onDismiss()
-        }
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shadowElevation = 8.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = StatusPresent,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(message, fontWeight = FontWeight.Medium)
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
-
-// ── Dashboard Principal ──
+// ── Dashboard ──
 
 @Composable
 fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
@@ -87,7 +47,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
         }
     }
 
-    var simEnabled by remember { mutableStateOf(true) }  // Auto-demarrage temps reel
+    var simEnabled by remember { mutableStateOf(true) }
 
     LaunchedEffect(simEnabled) {
         if (simEnabled) {
@@ -100,46 +60,45 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // Header
+
+            // ── Header compact ──
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(
-                            "Apercu de la seance",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            state.enseignant.matiereCourante,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    if (simEnabled) {
-                        Surface(
-                            shape = CircleShape,
-                            color = StatusPresent.copy(alpha = 0.1f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(6.dp).clip(CircleShape).background(StatusPresent)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusPresent)
-                            }
-                        }
-                    }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Dashboard",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        state.enseignant.matiereCourante,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
+                // Live dot
+                if (simEnabled) {
+                    Surface(
+                        shape = CircleShape,
+                        color = StatusPresent.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(6.dp).clip(CircleShape).background(StatusPresent))
+                            Spacer(Modifier.width(6.dp))
+                            Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusPresent)
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                }
+
+                // Statut seance badge
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = when (state.seanceStatut) {
@@ -149,26 +108,24 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                     }
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.size(8.dp).clip(CircleShape).background(
-                                when (state.seanceStatut) {
-                                    StatutSeance.PLANIFIE -> StatusPending
-                                    StatutSeance.EN_COURS -> StatusPresent
-                                    StatutSeance.CLOTURE_ENSEIGNANT -> InfoBlue
-                                }
-                            )
-                        )
-                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(
+                            when (state.seanceStatut) {
+                                StatutSeance.PLANIFIE -> StatusPending
+                                StatutSeance.EN_COURS -> StatusPresent
+                                StatutSeance.CLOTURE_ENSEIGNANT -> InfoBlue
+                            }
+                        ))
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             when (state.seanceStatut) {
                                 StatutSeance.PLANIFIE -> "Planifiee"
                                 StatutSeance.EN_COURS -> "En cours"
                                 StatutSeance.CLOTURE_ENSEIGNANT -> "Cloturee"
                             },
-                            style = MaterialTheme.typography.labelLarge,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = when (state.seanceStatut) {
                                 StatutSeance.PLANIFIE -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -180,104 +137,91 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
-
-            // KPIs — compacts + cliquables
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                KpiCardCompact(state.presents, if (state.total > 0) "${state.presents * 100 / state.total}%" else "0%",
-                    Icons.Default.CheckCircle, StatusPresent, Modifier.weight(1f),
-                    isActive = state.statutFilter == StatutFinal.PRESENT,
-                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.PRESENT) null else StatutFinal.PRESENT) })
-                KpiCardCompact(state.lates, if (state.total > 0) "${state.lates * 100 / state.total}%" else "0%",
-                    Icons.Default.Schedule, StatusLate, Modifier.weight(1f),
-                    isActive = state.statutFilter == StatutFinal.RETARD,
-                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.RETARD) null else StatutFinal.RETARD) })
-                KpiCardCompact(state.absents, if (state.total > 0) "${state.absents * 100 / state.total}%" else "0%",
-                    Icons.Default.Cancel, StatusAbsent, Modifier.weight(1f),
-                    isActive = state.statutFilter == StatutFinal.ABSENT,
-                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.ABSENT) null else StatutFinal.ABSENT) })
-                KpiCardCompact(state.total, "Total",
-                    Icons.Default.People, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
-                    isActive = false,
-                    onClick = { viewModel.filterByStatut(null) })
-            }
-
             Spacer(Modifier.height(12.dp))
 
-            // Filtres — scrollables
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    state.classes.forEach { c ->
-                        FilterChip(
-                            selected = state.selectedClasse == c,
-                            onClick = { viewModel.filterByClasse(c) },
-                            label = { Text(c, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.primary
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                borderColor = MaterialTheme.colorScheme.outlineVariant,
-                                selectedBorderColor = MaterialTheme.colorScheme.primary,
-                                enabled = true, selected = state.selectedClasse == c
-                            )
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    state.semestres.forEach { s ->
-                        FilterChip(
-                            selected = state.selectedSemestre == s,
-                            onClick = { viewModel.filterBySemestre(s) },
-                            label = { Text(s, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.primary
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                borderColor = MaterialTheme.colorScheme.outlineVariant,
-                                selectedBorderColor = MaterialTheme.colorScheme.primary,
-                                enabled = true, selected = state.selectedSemestre == s
-                            )
-                        )
-                    }
+            // ── KPIs compacts + Filtres sur UNE ligne ──
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // KPIs
+                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    KpiMini(state.presents, Icons.Default.CheckCircle, StatusPresent,
+                        isActive = state.statutFilter == StatutFinal.PRESENT,
+                        onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.PRESENT) null else StatutFinal.PRESENT) })
+                    KpiMini(state.lates, Icons.Default.Schedule, StatusLate,
+                        isActive = state.statutFilter == StatutFinal.RETARD,
+                        onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.RETARD) null else StatutFinal.RETARD) })
+                    KpiMini(state.absents, Icons.Default.Cancel, StatusAbsent,
+                        isActive = state.statutFilter == StatutFinal.ABSENT,
+                        onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.ABSENT) null else StatutFinal.ABSENT) })
+                    KpiMini(state.total, Icons.Default.People, MaterialTheme.colorScheme.onSurface,
+                        isActive = false, onClick = { viewModel.filterByStatut(null) })
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilledTonalButton(
-                        onClick = { simEnabled = !simEnabled },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (simEnabled) StatusPresent.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (simEnabled) "Stop" else "Live", fontSize = 12.sp)
-                    }
+                Spacer(Modifier.width(8.dp))
 
-                    FilledTonalButton(
-                        onClick = { viewModel.rafraichir() },
-                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Rafr.", fontSize = 12.sp)
-                    }
+                // Actions : classe / semestre / refresh / cloture
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        state.classes.forEach { c ->
+                            FilterChip(
+                                selected = state.selectedClasse == c,
+                                onClick = { viewModel.filterByClasse(c) },
+                                label = { Text(c, fontSize = 10.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                    enabled = true, selected = state.selectedClasse == c
+                                ),
+                                modifier = Modifier.height(28.dp)
+                            )
+                        }
 
-                    if (state.seanceStatut == StatutSeance.EN_COURS) {
-                        Button(
-                            onClick = { viewModel.cloturerSeance() },
-                            colors = ButtonDefaults.buttonColors(containerColor = StatusAbsent, contentColor = Color.White),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Clot.", fontSize = 12.sp)
+                        // Separator
+                        Box(Modifier.width(1.dp).height(18.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)))
+
+                        state.semestres.forEach { s ->
+                            FilterChip(
+                                selected = state.selectedSemestre == s,
+                                onClick = { viewModel.filterBySemestre(s) },
+                                label = { Text(s, fontSize = 10.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                    selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                    enabled = true, selected = state.selectedSemestre == s
+                                ),
+                                modifier = Modifier.height(28.dp)
+                            )
+                        }
+
+                        Box(Modifier.width(1.dp).height(18.dp).background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)))
+
+                        IconButton(onClick = { simEnabled = !simEnabled }, modifier = Modifier.size(26.dp)) {
+                            Icon(
+                                if (simEnabled) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = if (simEnabled) StatusPresent else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { viewModel.rafraichir() }, modifier = Modifier.size(26.dp)) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (state.seanceStatut == StatutSeance.EN_COURS) {
+                            IconButton(onClick = { viewModel.cloturerSeance() }, modifier = Modifier.size(26.dp)) {
+                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp),
+                                    tint = StatusAbsent)
+                            }
                         }
                     }
                 }
@@ -285,47 +229,46 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
             Spacer(Modifier.height(12.dp))
 
-            // Table - remplit l'espace restant
+            // ── Tableau des presences ──
             Card(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(Modifier.fillMaxSize()) {
-                    Row(Modifier.fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    // Header compact
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("#", Modifier.width(30.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        Text("#", Modifier.width(28.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Matricule", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        Text("Etudiant", Modifier.weight(1f), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Etudiant", Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        Text("Statut", Modifier.width(72.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Statut", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        Text("Arrivee", Modifier.width(52.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Arrivee", Modifier.width(80.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Depart", Modifier.width(80.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                        Text("Depart", Modifier.width(52.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), thickness = 1.dp)
 
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(state.rows, key = { it.id }) { row ->
-                            AttendanceRowItemCompact(row)
+                            StudentRow(row)
                         }
                         if (state.rows.isEmpty()) {
                             item {
                                 Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(Icons.Default.SearchOff, contentDescription = null,
-                                            modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                                        Spacer(Modifier.height(8.dp))
-                                        Text("Aucune donnee pour ce filtre",
+                                            modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                        Spacer(Modifier.height(6.dp))
+                                        Text("Aucune donnee", fontSize = 13.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                     }
                                 }
@@ -336,59 +279,70 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
             }
         }
 
-        // Toast overlay
-        Box(Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
-            LiveToast(message = toastMessage, visible = toastVisible, onDismiss = { toastVisible = false })
-        }
-    }
-}
-
-// ── KPI Card compact ──
-
-@Composable
-private fun KpiCardCompact(
-    value: Int,
-    subtitle: String,
-    icon: ImageVector,
-    valueColor: Color,
-    modifier: Modifier = Modifier,
-    isActive: Boolean = false,
-    onClick: () -> Unit = {}
-) {
-    Surface(
-        modifier = modifier.height(80.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-                else MaterialTheme.colorScheme.surface,
-        shadowElevation = if (isActive) 3.dp else 1.dp,
-        border = if (isActive) androidx.compose.foundation.BorderStroke(1.dp, valueColor.copy(alpha = 0.3f)) else null
-    ) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = valueColor.copy(alpha = if (isActive) 1f else 0.6f), modifier = Modifier.size(22.dp))
-            Spacer(Modifier.width(10.dp))
-            Column {
-                val animValue by animateIntAsState(
-                    targetValue = value,
-                    animationSpec = tween(400, easing = FastOutSlowInEasing),
-                    label = "kpi-$value"
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("$animValue", fontWeight = FontWeight.Bold, color = valueColor, fontSize = 22.sp)
-                    if (isActive) {
-                        Spacer(Modifier.width(6.dp))
-                        Box(Modifier.size(6.dp).clip(CircleShape).background(valueColor))
-                    }
-                }
-                Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Toast
+        if (toastVisible) {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = 8.dp)) {
+                LiveToast(message = toastMessage, onDismiss = { toastVisible = false })
             }
         }
     }
 }
 
-// ── Table Row compact ──
+// ── Toast ──
 
 @Composable
-private fun AttendanceRowItemCompact(row: AttendanceRow) {
+private fun LiveToast(message: String, onDismiss: () -> Unit) {
+    LaunchedEffect(Unit) { delay(3000); onDismiss() }
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shadowElevation = 6.dp
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = StatusPresent, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(message, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onDismiss, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
+                Text("OK", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+// ── KPI Mini ──
+
+@Composable
+private fun KpiMini(
+    value: Int, icon: ImageVector, valueColor: Color,
+    isActive: Boolean = false, onClick: () -> Unit = {}
+) {
+    val animValue by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(350),
+        label = "kpi-$value"
+    )
+    Surface(
+        modifier = Modifier.height(48.dp).width(72.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = if (isActive) valueColor.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+        shadowElevation = 0.dp,
+        border = if (isActive) androidx.compose.foundation.BorderStroke(1.dp, valueColor.copy(alpha = 0.2f)) else null
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null,
+                tint = valueColor.copy(alpha = if (isActive) 1f else 0.5f),
+                modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("$animValue", fontWeight = FontWeight.Bold, color = valueColor, fontSize = 16.sp)
+        }
+    }
+}
+
+// ── Ligne etudiant ──
+
+@Composable
+private fun StudentRow(row: AttendanceRow) {
     val statutColor = when (row.statut) {
         StatutFinal.PRESENT -> StatusPresent
         StatutFinal.RETARD -> StatusLate
@@ -405,34 +359,43 @@ private fun AttendanceRowItemCompact(row: AttendanceRow) {
         StatutFinal.PRESENT -> "Present"
         StatutFinal.RETARD -> "Retard"
         StatutFinal.ABSENT -> "Absent"
-        StatutFinal.EN_ATTENTE -> "En attente"
+        StatutFinal.EN_ATTENTE -> "Attente"
     }
 
     Row(
         modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("${row.id}", Modifier.width(30.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(row.matricule, Modifier.width(90.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-        Column(Modifier.weight(1f)) {
-            Text("${row.nom} ${row.prenom}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-        }
+        Text("${row.id}", Modifier.width(28.dp), fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
 
-        Surface(Modifier.width(90.dp), shape = RoundedCornerShape(6.dp), color = statutBg) {
-            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Box(Modifier.size(5.dp).clip(CircleShape).background(statutColor))
-                Spacer(Modifier.width(4.dp))
-                Text(statutLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = statutColor, textAlign = TextAlign.Center)
+        Column(Modifier.weight(1f)) {
+            Text("${row.nom} ${row.prenom}", fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(row.matricule, fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        }
+        Spacer(Modifier.width(4.dp))
+
+        // Badge statut compact
+        Surface(Modifier.width(72.dp), shape = RoundedCornerShape(4.dp), color = statutBg) {
+            Row(Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.size(4.dp).clip(CircleShape).background(statutColor))
+                Spacer(Modifier.width(3.dp))
+                Text(statutLabel, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
+                    color = statutColor, textAlign = TextAlign.Center)
             }
         }
 
-        Text(row.heureScanDebut, Modifier.width(80.dp), fontSize = 12.sp,
-            color = if (row.heureScanDebut == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        Text(row.heureScanDebut, Modifier.width(52.dp), fontSize = 11.sp,
+            color = if (row.heureScanDebut == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.onSurface)
-        Text(row.heureScanFin, Modifier.width(80.dp), fontSize = 12.sp,
-            color = if (row.heureScanFin == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        Text(row.heureScanFin, Modifier.width(52.dp), fontSize = 11.sp,
+            color = if (row.heureScanFin == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             else MaterialTheme.colorScheme.onSurface)
     }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), thickness = 0.5.dp)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.08f), thickness = 0.5.dp)
 }

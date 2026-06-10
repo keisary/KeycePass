@@ -1,7 +1,16 @@
 package com.ak.keycepass.desktop.ui.viewmodel
 
+import com.ak.keycepass.desktop.data.database.EmargementTable
+import com.ak.keycepass.desktop.data.database.ImportService
+import com.ak.keycepass.desktop.data.database.SeanceTable
+import com.ak.keycepass.desktop.data.service.SeanceSemaineRow
+import com.ak.keycepass.desktop.data.service.SeanceSemaineService
+import com.ak.keycepass.desktop.data.utils.QrCodeGenerator
+import com.ak.keycepass.desktop.data.server.KtorServer
 import com.ak.keycepass.shared.domain.model.StatutFinal
 import com.ak.keycepass.shared.domain.model.StatutSeance
+import com.ak.keycepass.shared.domain.model.Etudiant
+import com.ak.keycepass.shared.network.SessionStatusDto
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,8 +18,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.awt.image.BufferedImage
+import java.io.File
 
-// ── Profil Enseignant ──
+// ── Profil Enseignant (mock) ──
 
 data class TeacherProfile(
     val nom: String = "Iruzen",
@@ -20,7 +33,7 @@ data class TeacherProfile(
     val matiereCourante: String = "Ingenierie Logicielle"
 )
 
-// ── Ligne de presence ──
+// ── Ligne de presence (mock) ──
 
 data class AttendanceRow(
     val id: Int,
@@ -34,7 +47,7 @@ data class AttendanceRow(
     val semestre: String = "S2_2026"
 )
 
-// ── Etat du Dashboard ──
+// ── Etat du Dashboard (mock) ──
 
 data class DashboardState(
     val presents: Int = 0,
@@ -51,7 +64,7 @@ data class DashboardState(
     val statutFilter: StatutFinal? = null
 )
 
-// ── Entree historique ──
+// ── Entree historique (mock) ──
 
 data class HistoriqueEntry(
     val date: String,
@@ -62,18 +75,45 @@ data class HistoriqueEntry(
     val total: Int
 )
 
-// ── ViewModel ──
+// ── ViewModel fusionne ──
 
 class AdminViewModel {
+
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    // ─── État Dashboard (mock) ────────────────────────────────────────
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
     private val _liveEvents = MutableSharedFlow<String>(extraBufferCapacity = 16)
     val liveEvents: SharedFlow<String> = _liveEvents.asSharedFlow()
 
-    // Banque d'etudiants par classe
+    // ─── État Backend (admin-desktop) ─────────────────────────────────
+    private val _importState = MutableStateFlow<ImportState>(ImportState.Idle)
+    val importState: StateFlow<ImportState> = _importState.asStateFlow()
+
+    private val _classes = MutableStateFlow<List<String>>(emptyList())
+    val classes: StateFlow<List<String>> = _classes.asStateFlow()
+
+    private val _etudiants = MutableStateFlow<List<Etudiant>>(emptyList())
+    val etudiants: StateFlow<List<Etudiant>> = _etudiants.asStateFlow()
+
+    private val _qrCodeImage = MutableStateFlow<BufferedImage?>(null)
+    val qrCodeImage: StateFlow<BufferedImage?> = _qrCodeImage.asStateFlow()
+
+    private val _statsSeance = MutableStateFlow<SessionStatusDto?>(null)
+    val statsSeance: StateFlow<SessionStatusDto?> = _statsSeance.asStateFlow()
+
+    private val _semaines = MutableStateFlow<List<SeanceSemaineRow>>(emptyList())
+    val semaines: StateFlow<List<SeanceSemaineRow>> = _semaines.asStateFlow()
+
+    private val _creationSemaineState = MutableStateFlow<CreationSemaineState>(CreationSemaineState.Idle)
+    val creationSemaineState: StateFlow<CreationSemaineState> = _creationSemaineState.asStateFlow()
+
+    private val _historiqueBackend = MutableStateFlow<List<HistoriqueEntry>>(emptyList())
+    val historiqueBackend: StateFlow<List<HistoriqueEntry>> = _historiqueBackend.asStateFlow()
+
+    // ─── Banque d'etudiants mock (par classe) ─────────────────────────
     private val classeData: Map<String, List<Triple<String, String, String>>> = mapOf(
         "B1_IT" to listOf(
             Triple("Konan", "Jean", "B1-001"), Triple("N'Guessan", "Marie", "B1-002"),
@@ -111,7 +151,6 @@ class AdminViewModel {
         ),
     )
 
-    // Donnees historiques (partagees entre toutes les classes)
     private val historique = listOf(
         HistoriqueEntry("03/06", "Sem 1 - Lun", 9, 1, 2, 12),
         HistoriqueEntry("04/06", "Sem 1 - Mar", 7, 3, 2, 12),
@@ -122,6 +161,10 @@ class AdminViewModel {
     )
 
     init { chargerDonnees() }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // METHODES MOCK (Dashboard UI)
+    // ═══════════════════════════════════════════════════════════════════
 
     fun getHistorique(): List<HistoriqueEntry> = historique
 
@@ -229,5 +272,165 @@ class AdminViewModel {
         _state.value = _state.value.copy(seanceStatut = StatutSeance.CLOTURE_ENSEIGNANT)
     }
 
+    // ═══════════════════════════════════════════════════════════════════
+    // METHODES BACKEND (admin-desktop)
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun importerExcel(fichier: File) {
+        _importState.value = ImportState.Chargement
+        scope.launch(Dispatchers.IO) {
+            try {
+                val resultat = ImportService.importerDepuisExcel(fichier)
+                _importState.value = if (resultat.erreurs.isEmpty()) {
+                    ImportState.Succes(resultat.lignesImportees, resultat.totalLignes)
+                } else {
+                    ImportState.SuccesAvecAvertissements(
+                        resultat.lignesImportees, resultat.totalLignes, resultat.erreurs
+                    )
+                }
+                chargerToutesLesClasses()
+            } catch (e: Exception) {
+                _importState.value = ImportState.Erreur(e.message ?: "Erreur inconnue")
+            }
+        }
+    }
+
+    fun chargerToutesLesClasses() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                _classes.value = ImportService.getAllClasses()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement classes: ${e.message}")
+            }
+        }
+    }
+
+    fun selectionnerClasse(classeId: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                _etudiants.value = ImportService.getEtudiantsParClasse(classeId)
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur selection classe: ${e.message}")
+            }
+        }
+    }
+
+    fun genererQrEnrolement(classeId: String) {
+        scope.launch(Dispatchers.IO) {
+            val token = "${classeId}_${System.currentTimeMillis()}"
+            val serverUrl = KtorServer.getServerUrl()
+            _qrCodeImage.value = QrCodeGenerator.genererQrEnrolement(classeId, token, serverUrl)
+        }
+    }
+
+    fun creerSemaine(classeId: String, semaineIso: String, lat: Double, lon: Double) {
+        _creationSemaineState.value = CreationSemaineState.EnCours
+        scope.launch(Dispatchers.IO) {
+            val id = SeanceSemaineService.creerSemaine(classeId, semaineIso, lat, lon, rayonM = 200)
+            _creationSemaineState.value = if (id != null) {
+                chargerSemaines(classeId)
+                CreationSemaineState.Succes(id)
+            } else {
+                CreationSemaineState.Erreur("Une semaine existe déjà pour $classeId / $semaineIso")
+            }
+        }
+    }
+
+    fun chargerSemaines(classeId: String) {
+        scope.launch(Dispatchers.IO) {
+            _semaines.value = SeanceSemaineService.getSemainesParClasse(classeId)
+        }
+    }
+
+    fun genererQrPresenceSemaine(semaineId: Int) {
+        scope.launch(Dispatchers.IO) {
+            val semaine = SeanceSemaineService.getSemaineById(semaineId)
+            if (semaine == null) return@launch
+            val serverUrl = KtorServer.getServerUrl()
+            _qrCodeImage.value = QrCodeGenerator.genererQrPresenceSemaine(
+                semaineId = semaine.idSemaine,
+                classeId = semaine.classeId,
+                tokenSemaine = semaine.tokenSemaine,
+                serverUrl = serverUrl
+            )
+        }
+    }
+
+    fun resetCreationSemaineState() {
+        _creationSemaineState.value = CreationSemaineState.Idle
+    }
+
+    fun chargerStatistiquesSeance(seanceId: Int) {
+        scope.launch(Dispatchers.IO) {
+            _statsSeance.value = null
+        }
+    }
+
+    fun resetImportState() {
+        _importState.value = ImportState.Idle
+    }
+
+    fun chargerHistorique(classeId: String = "Toutes") {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val entries = transaction {
+                    val seances = SeanceTable
+                        .selectAll()
+                        .orderBy(SeanceTable.dateJour to org.jetbrains.exposed.sql.SortOrder.DESC)
+                        .limit(10)
+                        .map { seance ->
+                            val seanceId = seance[SeanceTable.idSeance]
+                            val emargements = EmargementTable
+                                .selectAll()
+                                .where { EmargementTable.seanceId eq seanceId }
+
+                            val presents = emargements.count { it[EmargementTable.statutFinal] == "PRESENT" }
+                            val retards = emargements.count { it[EmargementTable.statutFinal] == "RETARD" }
+                            val absents = emargements.count { it[EmargementTable.statutFinal] == "ABSENT" }
+                            val total = presents + retards + absents
+                            val date = seance[SeanceTable.dateJour] ?: ""
+                            val label = seance[SeanceTable.nomMatiere] ?: "Seance"
+
+                            HistoriqueEntry(
+                                date = date.takeLast(5),
+                                label = label,
+                                presents = presents,
+                                retards = retards,
+                                absents = absents,
+                                total = total
+                            )
+                        }
+                    seances.ifEmpty {
+                        // Fallback vers donnees mockees si aucune seance en DB
+                        historique
+                    }
+                }
+                _historiqueBackend.value = entries
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur historique: ${e.message}")
+                _historiqueBackend.value = historique
+            }
+        }
+    }
+
     fun onDestroy() { scope.cancel() }
+}
+
+// ─── États pour l'UI d'import Excel ───────────────────────────────────
+sealed class ImportState {
+    data object Idle : ImportState()
+    data object Chargement : ImportState()
+    data class Succes(val importees: Int, val total: Int) : ImportState()
+    data class SuccesAvecAvertissements(
+        val importees: Int, val total: Int, val avertissements: List<String>
+    ) : ImportState()
+    data class Erreur(val message: String) : ImportState()
+}
+
+// ─── États pour la création d'une semaine ─────────────────────────────
+sealed class CreationSemaineState {
+    data object Idle : CreationSemaineState()
+    data object EnCours : CreationSemaineState()
+    data class Succes(val semaineId: Int) : CreationSemaineState()
+    data class Erreur(val message: String) : CreationSemaineState()
 }
