@@ -1,6 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
+<<<<<<< HEAD
     alias(libs.plugins.kotlin.serialization)
+=======
+>>>>>>> origin/main
     alias(libs.plugins.kotlin.compose)
 }
 
