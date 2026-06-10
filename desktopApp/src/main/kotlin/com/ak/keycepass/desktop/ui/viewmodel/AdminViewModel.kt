@@ -5,6 +5,7 @@ import com.ak.keycepass.desktop.data.database.DatabaseTables.EtudiantTable
 import com.ak.keycepass.desktop.data.database.DatabaseTables.SeanceTable
 import com.ak.keycepass.desktop.data.database.ImportService
 import com.ak.keycepass.desktop.data.utils.QrCodeGenerator
+import com.ak.keycepass.desktop.data.server.KtorServer
 import com.ak.keycepass.shared.domain.model.Etudiant
 import com.ak.keycepass.shared.network.SessionStatusDto
 import kotlinx.coroutines.CoroutineScope
@@ -94,7 +95,8 @@ class AdminViewModel {
         scope.launch {
             // Token basé sur l'ID de classe + timestamp
             val token = "${classeId}_${System.currentTimeMillis()}"
-            _qrCodeImage.value = QrCodeGenerator.genererQrEnrolement(classeId, token)
+            val serverUrl = KtorServer.getServerUrl()
+            _qrCodeImage.value = QrCodeGenerator.genererQrEnrolement(classeId, token, serverUrl)
         }
     }
 
@@ -115,29 +117,39 @@ class AdminViewModel {
     fun chargerStatistiquesSeance(seanceId: Int) {
         scope.launch {
             val stats = transaction {
-                val etudiants = EtudiantTable.selectAll()
-                val emargements = EmargementTable
-                    .selectAll()
-                    .where { EmargementTable.seanceId eq seanceId }
-                    .toList()
-
-                val totalPresents = emargements.count { it[EmargementTable.statutFinal] == "PRESENT" }
-                val totalRetards = emargements.count { it[EmargementTable.statutFinal] == "RETARD" }
-                val totalAbsents = emargements.count { it[EmargementTable.statutFinal] == "ABSENT" }
-                val statut = SeanceTable
+                val seance = SeanceTable
                     .selectAll()
                     .where { SeanceTable.idSeance eq seanceId }
                     .firstOrNull()
-                    ?.get(SeanceTable.statutSeance) ?: "PLANIFIE"
 
-                SessionStatusDto(
-                    seanceId = seanceId,
-                    totalInscrits = etudiants.count(),
-                    totalPresents = totalPresents,
-                    totalRetards = totalRetards,
-                    totalAbsents = totalAbsents,
-                    cloture = statut == "CLOTURE_ENSEIGNANT"
-                )
+                if (seance != null) {
+                    val classeId = seance[SeanceTable.classeId]
+                    val totalInscrits = EtudiantTable
+                        .selectAll()
+                        .where { EtudiantTable.classeId eq classeId }
+                        .count().toInt()
+
+                    val emargements = EmargementTable
+                        .selectAll()
+                        .where { EmargementTable.seanceId eq seanceId }
+                        .toList()
+
+                    val totalPresents = emargements.count { it[EmargementTable.statutFinal] == "PRESENT" }
+                    val totalRetards = emargements.count { it[EmargementTable.statutFinal] == "RETARD" }
+                    val totalAbsents = emargements.count { it[EmargementTable.statutFinal] == "ABSENT" }
+                    val statut = seance[SeanceTable.statutSeance]
+
+                    SessionStatusDto(
+                        seanceId = seanceId,
+                        totalInscrits = totalInscrits,
+                        totalPresents = totalPresents,
+                        totalRetards = totalRetards,
+                        totalAbsents = totalAbsents,
+                        cloture = statut == "CLOTURE_ENSEIGNANT"
+                    )
+                } else {
+                    null
+                }
             }
             _statsSeance.value = stats
         }

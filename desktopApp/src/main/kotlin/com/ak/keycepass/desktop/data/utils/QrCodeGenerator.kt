@@ -29,8 +29,9 @@ object QrCodeGenerator {
      * @param token Jeton de validation généré par le serveur
      * @return BufferedImage du QR code
      */
-    fun genererQrEnrolement(classeId: String, token: String): BufferedImage {
-        val contenu = "keycepass://enrolement?classeId=$classeId&token=$token"
+    fun genererQrEnrolement(classeId: String, token: String, serverUrl: String): BufferedImage {
+        val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
+        val contenu = "keycepass://enrolement?classeId=$classeId&token=$token&serverUrl=$encodedUrl"
         return genererQrCode(contenu)
     }
 

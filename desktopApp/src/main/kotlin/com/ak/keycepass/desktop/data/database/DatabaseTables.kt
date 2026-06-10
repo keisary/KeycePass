@@ -18,6 +18,16 @@ object EtudiantTable : Table("Etudiant") {
     override val primaryKey = PrimaryKey(idEtudiant)
 }
 
+object EnseignantTable : Table("Enseignant") {
+    val idEnseignant = integer("id_enseignant").autoIncrement()
+    val matriculeEnseignant = varchar("matricule_enseignant", 50).uniqueIndex()
+    val nom = varchar("nom", 100)
+    val prenom = varchar("prenom", 100)
+    val deviceUuid = varchar("device_uuid", 255).nullable().uniqueIndex()
+
+    override val primaryKey = PrimaryKey(idEnseignant)
+}
+
 object SeanceTable : Table("Seance") {
     val idSeance = integer("id_seance").autoIncrement()
     val nomMatiere = varchar("nom_matiere", 100)
@@ -26,6 +36,7 @@ object SeanceTable : Table("Seance") {
     val heureDebut = varchar("heure_debut", 8)     // Format HH:MM:SS
     val heureFin = varchar("heure_fin", 8)         // Format HH:MM:SS
     val statutSeance = varchar("statut_seance", 30)
+    val enseignantId = integer("enseignant_id").references(EnseignantTable.idEnseignant).nullable()
 
     override val primaryKey = PrimaryKey(idSeance)
 }

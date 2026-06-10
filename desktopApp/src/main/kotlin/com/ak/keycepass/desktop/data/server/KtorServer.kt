@@ -6,6 +6,8 @@ import com.ak.keycepass.desktop.data.database.DatabaseTables.SeanceTable
 import com.ak.keycepass.shared.network.ScanPayload
 import com.ak.keycepass.shared.network.ScanResponse
 import com.ak.keycepass.shared.network.ScanType
+import com.ak.keycepass.shared.network.SessionStatusDto
+import io.ktor.http.HttpStatusCode
 import com.ak.keycepass.shared.domain.utils.StatutUtils
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -179,6 +181,52 @@ object KtorServer {
                     }
                     call.respond(mapOf("success" to true))
                 }
+
+                // ─── Statistiques d'une séance ──────────────────────────────
+                get("/api/seance/{seanceId}/stats") {
+                    val seanceId = call.parameters["seanceId"]?.toIntOrNull()
+                        ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("erreur" to "ID de séance invalide"))
+
+                    val stats = transaction {
+                        val seance = SeanceTable
+                            .selectAll()
+                            .where { SeanceTable.idSeance eq seanceId }
+                            .firstOrNull()
+
+                        if (seance == null) return@transaction null
+
+                        val classeId = seance[SeanceTable.classeId]
+                        val totalInscrits = EtudiantTable
+                            .selectAll()
+                            .where { EtudiantTable.classeId eq classeId }
+                            .count().toInt()
+
+                        val emargements = EmargementTable
+                            .selectAll()
+                            .where { EmargementTable.seanceId eq seanceId }
+                            .toList()
+
+                        val totalPresents = emargements.count { it[EmargementTable.statutFinal] == "PRESENT" }
+                        val totalRetards = emargements.count { it[EmargementTable.statutFinal] == "RETARD" }
+                        val totalAbsents = emargements.count { it[EmargementTable.statutFinal] == "ABSENT" }
+                        val statut = seance[SeanceTable.statutSeance]
+
+                        SessionStatusDto(
+                            seanceId = seanceId,
+                            totalInscrits = totalInscrits,
+                            totalPresents = totalPresents,
+                            totalRetards = totalRetards,
+                            totalAbsents = totalAbsents,
+                            cloture = statut == "CLOTURE_ENSEIGNANT"
+                        )
+                    }
+
+                    if (stats == null) {
+                        call.respond(HttpStatusCode.NotFound, mapOf("erreur" to "Séance introuvable"))
+                    } else {
+                        call.respond(stats)
+                    }
+                }
             }
         }.start(wait = false)
 
@@ -188,6 +236,30 @@ object KtorServer {
     fun stop() {
         server?.stop(1000, 5000)
         println("Serveur KeycePass arrêté.")
+    }
+
+    fun getLocalIpAddress(): String {
+        try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val networkInterface = interfaces.nextElement()
+                if (networkInterface.isLoopback || !networkInterface.isUp || networkInterface.isVirtual) continue
+                val addresses = networkInterface.inetAddresses
+                while (addresses.hasMoreElements()) {
+                    val address = addresses.nextElement()
+                    if (address is java.net.Inet4Address) {
+                        return address.hostAddress
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignorer
+        }
+        return "127.0.0.1"
+    }
+
+    fun getServerUrl(): String {
+        return "http://${getLocalIpAddress()}:8080"
     }
 }
 

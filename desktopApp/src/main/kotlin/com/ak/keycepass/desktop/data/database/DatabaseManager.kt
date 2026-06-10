@@ -35,6 +35,7 @@ object DatabaseManager {
         )
         transaction {
             SchemaUtils.createMissingTablesAndColumns(
+                EnseignantTable,
                 EtudiantTable,
                 SeanceTable,
                 EmargementTable
