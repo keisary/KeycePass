@@ -29,14 +29,16 @@ KeycePass/
 
 L'application desktop est développée avec **Compose Multiplatform** et embarque un **serveur Ktor** intégré.
 
-### Design Philosophy — "Nature Morte"
+### Design Philosophy — "Monochrome"
 
-L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
-- Palette restreinte et posée : **brun profond, olive, crème, gris chaud**
-- Couleurs mates, sans gradients
-- Typographie sobre, espacement généreux
-- Icônes vectorielles Material Design (zéro émoji)
-- Professionnel, sophistiqué, lisible
+L'interface s'inspire des sites modernes ultra-sophistiqués (Linear, Stripe, Vercel) :
+- Palette **noir & blanc pur** : fond `#000000`, surfaces `#0A0A0A`, texte `#F5F5F5`
+- Zéro couleur inutile — seuls les statuts ont une micro-couleur subtile
+- Zéro gradient, zéro emoji, zéro effet flashy
+- Typographie sobre, espacement généreux, poids de police pour la hiérarchie visuelle
+- Icônes vectorielles Material Design (zéro emoji)
+- Dark mode par défaut (comme les apps pro)
+- Professionnel, austère, premium
 
 ### Animations & Interations
 - **Compteurs animés** : les KPIs augmentent/diminuent en smooth (animateIntAsState)
@@ -73,17 +75,20 @@ L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
 | ZXing (QR Code) | 3.5.3 |
 | Coroutines | 1.10.1 |
 
-### Palette
+### Palette — Monochrome
 
-```
-Brun profond   #5D4037   — Primary (ancre)
-Olive/Sage     #6B8E5E   — Secondary
-Taupe chaud    #8B7355   — Tertiary
-Crème          #F7F3ED   — Background
-Charcoal       #2C2C2C   — Texte
-Forest green   #4A7C59   — Présent
-Brick red      #8B3A3A   — Absent
-Dark gold      #B8860B   — Retard
+```css
+Fond              #000000   — Pure black (dark mode)
+Surface           #0A0A0A   — Almost black
+Surface 2         #141414   — Subtle elevation
+Texte principal   #F5F5F5   — Off-white
+Texte secondaire  #737373   — Gris silencieux
+Bordure           #1A1A1A   — Ligne ultra-subtile
+
+--- Status (micro-couleurs uniquement) ---
+Present           #22C55E   — Vert (seul vrai point couleur)
+Retard            #A3A3A3   — Gris (presque invisible)
+Absent            #6B3A3A   — Rouge foncé discret
 ```
 
 ## Installation & Execution

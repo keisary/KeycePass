@@ -1,5 +1,35 @@
 # Changelog KeycePass
 
+## [2.0.0] — 2026-06-10 (Branche iruzen) — Monochrome
+
+### Theme Noir & Blanc (Linear/Stripe style)
+- **Theme complet refondu** : palette monochrome pur inspirée de Linear, Stripe, Vercel
+  - Dark mode par défaut : fond `#000000`, surfaces `#0A0A0A`, texte `#F5F5F5`
+  - Light mode disponible : fond `#F5F5F5`, surfaces blanches, texte `#0A0A0A`
+  - Status Present : vert subtil `#22C55E` (seul point couleur)
+  - Status Late : gris `#A3A3A3` (pas de jaune flashy)
+  - Status Absent : rouge foncé `#6B3A3A` (discret)
+  - Zéro gradient, zéro couleur inutile, zéro emoji
+- Fichier : `ui/theme/Theme.kt` réécrit (4340 octets)
+
+### Filtres fonctionnels
+- `filterByClasse()` et `filterBySemestre()` filtrent maintenant les données
+- Liste des classes et semestres exposée dans le DashboardState
+- Chip filters interactifs dans le Dashboard
+
+### Raccourcis clavier
+- `Ctrl+1` → Dashboard
+- `Ctrl+2` → QR Codes
+- `Ctrl+3` → Pairages
+- `Ctrl+4` → Historique
+- Gérés globalement via `onPreviewKeyEvent` dans `AdminLayout.kt`
+
+### Corrections
+- `animateIntAsState()` corrigé pour l'API Compose 1.8.0 (animationSpec correcte)
+- `HistoriqueScreen` connecté au ViewModel (données partagées, plus hardcodées)
+- Toutes les anciennes couleurs (`GreenPresent`, `YellowLate`, `RedAbsent`) migrées vers `StatusPresent`, `StatusLate`, `StatusAbsent`
+- Import `scale` inutile supprimé de DashboardScreen
+
 ## [1.3.0] — 2026-06-10 (Branche iruzen)
 
 ### Animations & Live
