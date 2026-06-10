@@ -37,6 +37,7 @@ object DatabaseManager {
             SchemaUtils.createMissingTablesAndColumns(
                 EnseignantTable,
                 EtudiantTable,
+                SeanceSemaineTable,
                 SeanceTable,
                 EmargementTable
             )
