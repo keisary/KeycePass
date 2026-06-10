@@ -15,7 +15,7 @@ data class Emargement(
     val horodatageScanFin: String? = null,   // Heure précise du 2e scan (Ex: "2026-06-10 09:55:12") 
     
     // Par défaut, le statut est "EN_ATTENTE" tant que le cours n'est pas fini[cite: 88].
-    val statutFinal: StatutFinal = StatutFinal.EN_ATTENTE [cite: 88]
+    val statutFinal: StatutFinal = StatutFinal.EN_ATTENTE
 )
 
 /**
