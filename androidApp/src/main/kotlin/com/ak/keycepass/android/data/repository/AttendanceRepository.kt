@@ -4,7 +4,6 @@ import com.ak.keycepass.android.data.local.LocalDatabase
 import com.ak.keycepass.android.data.local.SessionManager
 import com.ak.keycepass.android.data.local.UserRole
 import com.ak.keycepass.android.data.local.entities.EmargementLocal
-import com.ak.keycepass.android.data.local.entities.SeanceLocal
 import com.ak.keycepass.android.data.network.NetworkClient
 import com.ak.keycepass.shared.domain.utils.StatutUtils
 import com.ak.keycepass.shared.network.ScanPayload
@@ -13,7 +12,6 @@ import com.ak.keycepass.shared.network.SeanceCouranteDto
 import com.ak.keycepass.shared.network.SessionStatusDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.Instant
 
 /**
  * Dépôt central de la logique métier de l'application mobile.
@@ -73,8 +71,8 @@ class AttendanceRepository(
         etudiantDao.insert(
             com.ak.keycepass.android.data.local.entities.EtudiantLocal(
                 matricule = matricule,
-                classeId = params["classeId"].orEmpty(),
-                deviceUuid = deviceUuid,
+                identifiantClasse = params["classeId"].orEmpty(),
+                identifiantAppareil = deviceUuid,
                 role = role.name
             )
         )
@@ -122,7 +120,7 @@ class AttendanceRepository(
         val seanceLocale = db.seanceDao().findById(seanceId)
             ?: return@withContext ScanResult.Erreur("Séance introuvable. Contactez le délégué.")
 
-        val heureActuelle = Instant.now().toString()
+        val heureActuelle = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date())
 
         // Calculer le statut provisoire (règle des 15 min)
         val minutesDebut = StatutUtils.parseTimeToMinutes(seanceLocale.heureDebut)
@@ -205,7 +203,7 @@ class AttendanceRepository(
         val seanceLocale = db.seanceDao().findById(seanceId)
             ?: return@withContext ScanResult.Erreur("Séance introuvable.")
 
-        val heureActuelle = Instant.now().toString()
+        val heureActuelle = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date())
 
         // Calculer le statut final (via StatutUtils du module :shared)
         val statutFinal = StatutUtils.determinerStatutFinal(

@@ -1,5 +1,3 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
     kotlin("jvm")
     alias(libs.plugins.kotlin.serialization)
@@ -8,17 +6,16 @@ plugins {
     application
 }
 
+group = "com.ak.keycepass"
+version = "1.0.0"
+
 application {
     mainClass.set("com.ak.keycepass.desktop.MainKt")
 }
 
-<<<<<<< HEAD
 kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-=======
-group = "com.ak.keycepass"
-version = "1.0.0"
+    jvmToolchain(21)
+}
 
 dependencies {
     // Module partagé
@@ -61,11 +58,4 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
->>>>>>> origin/main
-    }
 }

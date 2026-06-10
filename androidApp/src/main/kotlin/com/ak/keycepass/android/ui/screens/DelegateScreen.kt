@@ -26,6 +26,7 @@ import com.ak.keycepass.android.ui.theme.StateAbsent
 import com.ak.keycepass.android.ui.theme.StateLate
 import com.ak.keycepass.android.ui.theme.StateSuccess
 import com.ak.keycepass.android.ui.viewmodel.DelegueViewModel
+import com.ak.keycepass.android.ui.viewmodel.StatsUiState
 import com.ak.keycepass.shared.domain.model.StatutFinal
 import com.ak.keycepass.shared.network.SessionStatusDto
 
@@ -88,8 +89,9 @@ fun DelegateScreen(
                 onValueChange = { selectedSeanceId = it.toIntOrNull() ?: -1 },
                 label = { Text("ID Séance") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color(0xFF1E293B),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF1E293B),
+                    unfocusedContainerColor = Color(0xFF1E293B),
                     focusedBorderColor = Color(0xFF818CF8),
                     unfocusedBorderColor = Color(0xFF334155),
                     focusedTextColor = Color.White,
@@ -125,7 +127,7 @@ fun DelegateScreen(
                             .weight(0.6f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFF818CF8))
+                        CircularProgressIndicator(color = Color(0xFF818CF8))
                     }
                 }
                 is StatsUiState.Erreur -> {

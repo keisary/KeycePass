@@ -14,7 +14,6 @@ import com.ak.keycepass.android.ui.screens.TeacherScreen
 import com.ak.keycepass.android.ui.viewmodel.DelegueViewModel
 import com.ak.keycepass.android.ui.viewmodel.EnrolementViewModel
 import com.ak.keycepass.android.ui.viewmodel.ScanViewModel
-import com.ak.keycepass.shared.network.NetworkModels
 
 @Composable
 fun KeycePassNavHost(

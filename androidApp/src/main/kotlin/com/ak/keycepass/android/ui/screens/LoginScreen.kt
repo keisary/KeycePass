@@ -1,6 +1,7 @@
 package com.ak.keycepass.android.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.ak.keycepass.android.ui.viewmodel.EnrolementViewModel
 
@@ -91,8 +93,9 @@ fun LoginScreen(
                 onValueChange = { matricule = it },
                 label = { Text("Votre matricule") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color(0xFF1E293B),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF1E293B),
+                    unfocusedContainerColor = Color(0xFF1E293B),
                     focusedBorderColor = Color(0xFF818CF8),
                     unfocusedBorderColor = Color(0xFF334155),
                     focusedTextColor = Color.White,
@@ -112,32 +115,29 @@ fun LoginScreen(
             ) {
                 listOf("ETUDIANT", "DELEGUE", "ENSEIGNANT").forEach { role ->
                     val selected = selectedRole == role
-                    androidx.compose.foundation.clickable(
-                        onClick = { selectedRole = role }
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (selected) Color(0xFF312E81) else Color(0xFF1E293B)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(60.dp)
+                            .clickable { selectedRole = role }
                     ) {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (selected) Color(0xFF312E81) else Color(0xFF1E293B)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
+                        Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(60.dp)
+                                .fillMaxSize()
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = role,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (selected) Color.White else Color(0xFF94A3B8),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            Text(
+                                text = role,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected) Color.White else Color(0xFF94A3B8),
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }

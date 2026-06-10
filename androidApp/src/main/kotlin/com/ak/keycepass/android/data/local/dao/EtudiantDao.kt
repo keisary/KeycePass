@@ -8,10 +8,10 @@ import com.ak.keycepass.android.data.local.entities.EtudiantLocal
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface AccesEtudiant {
+interface EtudiantDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun inserer(etudiant: EtudiantLocal)
+    suspend fun insert(etudiant: EtudiantLocal)
 
     @Query("SELECT * FROM etudiant_local WHERE matricule = :matricule LIMIT 1")
-    suspend fun trouverParMatricule(matricule: String): EtudiantLocal?
+    suspend fun findByMatricule(matricule: String): EtudiantLocal?
 }
