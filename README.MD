@@ -331,9 +331,12 @@ Base URL : `http://{IP_DU_PC}:8080`
 
 ### Desktop (serveur)
 ```bash
-./gradlew :desktopApp:run
+KeycePass_Launch.bat
 ```
-Le serveur Ktor démarre automatiquement sur le port `8080`.
+
+> ⚠️ Ne pas utiliser `./gradlew :desktopApp:run` : le daemon Gradle tourne en Session 0,
+> donc la fenêtre Compose démarre invisible pour l’utilisateur.
+> Le launcher utilise `javaw` + `-classpath "lib/*"` + `-Dskiko.renderApi=SOFTWARE_FAST`.
 
 ### Android
 Ouvrir dans Android Studio et lancer sur un émulateur ou appareil physique.
