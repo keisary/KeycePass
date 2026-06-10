@@ -691,7 +691,18 @@ class AdminViewModel {
             }
         }
     }
+
+    fun genererFichierTestExcel(destination: File) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                ImportService.genererFichierTestExcel(destination)
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur generation Excel test: ${e.message}")
+            }
+        }
+    }
 }
+
 
 // ─── États pour l'UI d'import Excel ───────────────────────────────────
 sealed class ImportState {

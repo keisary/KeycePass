@@ -85,22 +85,46 @@ fun QRManagementScreen() {
                     Column(Modifier.padding(16.dp)) {
                         Text("Import des etudiants", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                         Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = {
-                                val chooser = JFileChooser().apply {
-                                    dialogTitle = "Selectionner le fichier Excel"
-                                    fileFilter = FileNameExtensionFilter("Fichiers Excel (.xlsx)", "xlsx")
-                                }
-                                if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-                                    vm.importerExcel(chooser.selectedFile)
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            enabled = importState !is ImportState.Chargement
-                        ) {
-                            Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Importer .xlsx", fontSize = 13.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    val chooser = JFileChooser().apply {
+                                        dialogTitle = "Selectionner le fichier Excel"
+                                        fileFilter = FileNameExtensionFilter("Fichiers Excel (.xlsx)", "xlsx")
+                                    }
+                                    if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+                                        vm.importerExcel(chooser.selectedFile)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                enabled = importState !is ImportState.Chargement
+                            ) {
+                                Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Importer .xlsx", fontSize = 13.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    val chooser = JFileChooser().apply {
+                                        dialogTitle = "Enregistrer le fichier modèle"
+                                        selectedFile = File("etudiants_test.xlsx")
+                                        fileFilter = FileNameExtensionFilter("Fichiers Excel (.xlsx)", "xlsx")
+                                    }
+                                    if (chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                                        var file = chooser.selectedFile
+                                        if (!file.name.endsWith(".xlsx")) {
+                                            file = File(file.parentFile, file.name + ".xlsx")
+                                        }
+                                        vm.genererFichierTestExcel(file)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Générer modèle", fontSize = 13.sp)
+                            }
                         }
 
                         when (val s = importState) {

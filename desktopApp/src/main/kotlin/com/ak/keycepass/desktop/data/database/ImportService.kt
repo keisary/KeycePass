@@ -2,10 +2,12 @@ package com.ak.keycepass.desktop.data.database
 
 import com.ak.keycepass.shared.domain.model.Etudiant
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * Service d'importation des étudiants depuis un fichier Excel (.xlsx) ou CSV.
@@ -133,4 +135,42 @@ object ImportService {
                 .sorted()
         }
     }
+
+    /**
+     * Génère un fichier Excel type conforme à l'importation.
+     */
+    fun genererFichierTestExcel(destination: File) {
+        val workbook = XSSFWorkbook()
+        val sheet = workbook.createSheet("Etudiants")
+
+        // En-tête
+        val header = sheet.createRow(0)
+        header.createCell(0).setCellValue("matricule")
+        header.createCell(1).setCellValue("nom")
+        header.createCell(2).setCellValue("prenom")
+        header.createCell(3).setCellValue("classe_id")
+
+        // Données
+        val data = listOf(
+            listOf("2026_B2IT_001", "Koffi", "Jean-Emmanuel", "B2_IT"),
+            listOf("2026_B2IT_002", "Traore", "Mariam", "B2_IT"),
+            listOf("2026_B2IT_003", "Kouadio", "Adjoua", "B2_IT"),
+            listOf("2026_B1IT_001", "N'Guessan", "Serge", "B1_IT"),
+            listOf("2026_B1IT_002", "Bamba", "Ali", "B1_IT"),
+            listOf("2026_B3M_001", "Ouattara", "Awa", "B3_MANAGEMENT")
+        )
+
+        data.forEachIndexed { index, rowData ->
+            val row = sheet.createRow(index + 1)
+            rowData.forEachIndexed { cellIndex, cellValue ->
+                row.createCell(cellIndex).setCellValue(cellValue)
+            }
+        }
+
+        FileOutputStream(destination).use { out ->
+            workbook.write(out)
+        }
+        workbook.close()
+    }
 }
+
