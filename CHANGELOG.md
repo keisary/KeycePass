@@ -1,5 +1,34 @@
 # Changelog KeycePass
 
+## [1.3.0] — 2026-06-10 (Branche iruzen)
+
+### Animations & Live
+- **KPIs animés** : compteurs avec animateIntAsState (chiffres qui montent/descendent en smooth)
+- **Barre de stats animée** : proportions présences/retards/absences avec transition fluide
+- **Transitions entre écrans** : AnimatedContent avec slide horizontal + fade
+- **Toast notifications live** : notification qui slide depuis le haut quand un étudiant émarge
+- **Simulation temps réel** : arrivées aléatoires d'étudiants toutes les 5-15s avec mise à jour des KPIs
+- **Badge LIVE** : indicateur vert quand la simulation est active
+
+### Nouvel écran : Historique & Statistiques
+- Graphiques en barres cumulées (présence/retard/absence) par séance
+- Taux moyens (présence, retard, absence) sur les 6 dernières séances
+- Barres animées avec animateFloatAsState
+- Légende colorée
+
+### Interface
+- **Commande Palette** : Ctrl+K ou clique sur le bouton de recherche
+  - Recherche d'écran par nom
+  - Navigation clavier (flèches + Enter, Escape pour fermer)
+  - Raccourcis affichés (Ctrl+1, Ctrl+2, Ctrl+3, Ctrl+4)
+- **Hover effect** : les lignes du tableau s'illuminent au survol
+- **Nouveau Screen** : `HISTORIQUE` ajouté dans le enum et la sidebar
+
+### Technique
+- Ajout : `HistoriqueScreen.kt` (8066 lignes de graphiques)
+- Refacto `AdminLayout.kt` : rendu direct des écrans dans AnimatedContent (plus de content slot)
+- `AdminViewModel.kt` : nouveau `liveEvents: SharedFlow<String>` pour les toasts + `simulateArrivee()`
+
 ## [1.2.0] — 2026-06-10 (Branche iruzen)
 
 ### Features finales

@@ -38,6 +38,19 @@ L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
 - Icônes vectorielles Material Design (zéro émoji)
 - Professionnel, sophistiqué, lisible
 
+### Animations & Interations
+- **Compteurs animés** : les KPIs augmentent/diminuent en smooth (animateIntAsState)
+- **Transitions** : slide horizontal + fade entre chaque écran
+- **Notifications live** : toasts qui glissent depuis le haut quand un étudiant émarge
+- **Survol** : les lignes du tableau s'illuminent au passage de la souris
+
+### Raccourcis
+| Touche | Action |
+|--------|--------|
+| Ctrl+K / Cmd+K | Commande Palette (recherche d'écran, navigation) |
+| Escape | Fermer la palette |
+| Ctrl+1..4 | Navigation directe vers un écran |
+
 ### Fonctionnalités
 
 | Ecran | Description | Statut |
@@ -45,6 +58,7 @@ L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
 | **Dashboard** | KPIs temps reel (Presence/Retards/Absents) + tableau des etudiants + filtres | Livre |
 | **QR Codes** | Generation de vrai QR Code (ZXing) par classe et semestre + **export PNG** | Livre |
 | **Pairages** | Gestion des appareils couples, dissociation, recouplage | Livre |
+| **Historique** | Graphiques barres cumulees, taux presence/retard/absence, evolution sur 6 seances | Livre |
 | **Serveur Ktor** | API REST embarquee (port 8080) + WebSocket live + statut dynamique | Livre |
 
 ### Stack technique
