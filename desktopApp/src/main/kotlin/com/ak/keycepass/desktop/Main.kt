@@ -4,12 +4,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.ak.keycepass.desktop.ui.AdminLayout
@@ -28,12 +26,17 @@ fun main() = application {
             appScope.launch { ServerManager.stop() }
             exitApplication()
         },
-        title = "KeycePass — Administration",
-        state = rememberWindowState(
-            size = DpSize(1280.dp, 800.dp),
-            position = WindowPosition(Alignment.Center)
-        ),
+        onPreviewKeyEvent = { false },
+        title = "KeycePass",
+        state = rememberWindowState(size = DpSize(980.dp, 650.dp)),
+        alwaysOnTop = false,
+        resizable = true
     ) {
+        // On force le focus quand la fenetre apparait
+        LaunchedEffect(Unit) {
+            println("[KeycePass] Fenetre Compose creee")
+        }
+
         KeycePassTheme {
             Surface(Modifier.fillMaxSize()) {
                 App()

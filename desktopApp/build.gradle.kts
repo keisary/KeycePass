@@ -40,7 +40,7 @@ dependencies {
 }
 
 application {
-    applicationDefaultJvmArgs = listOf("-Dskiko.renderApi=OPENGL")
+    applicationDefaultJvmArgs = listOf("-Dskiko.renderApi=SOFTWARE_FAST")
     mainClass.set("com.ak.keycepass.desktop.MainKt")
 }
 
@@ -49,3 +49,4 @@ kotlin {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
+
