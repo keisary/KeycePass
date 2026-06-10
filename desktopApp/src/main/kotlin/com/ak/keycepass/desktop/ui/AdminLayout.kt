@@ -154,50 +154,6 @@ fun AdminLayout(
 
                     Spacer(Modifier.weight(1f))
 
-                    // ── Profil Enseignant ──
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        tonalElevation = 0.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Avatar
-                            Surface(
-                                modifier = Modifier.size(42.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            ) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        "TG",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    "The Guy",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(StatusPresent)
-                            )
-                        }
-                    }
-
                     // Server Status Badge
                     Surface(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),

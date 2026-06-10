@@ -3,9 +3,11 @@ package com.ak.keycepass.desktop.ui.screens
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -178,45 +180,38 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // KPIs — cliquables pour filtrer le tableau
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                KpiCard("Presence", state.presents, if (state.total > 0) "${state.presents * 100 / state.total}%" else "0%",
+            // KPIs — compacts + cliquables
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                KpiCardCompact(state.presents, if (state.total > 0) "${state.presents * 100 / state.total}%" else "0%",
                     Icons.Default.CheckCircle, StatusPresent, Modifier.weight(1f),
                     isActive = state.statutFilter == StatutFinal.PRESENT,
-                    onClick = {
-                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.PRESENT) null else StatutFinal.PRESENT)
-                    })
-                KpiCard("Retard", state.lates, if (state.total > 0) "${state.lates * 100 / state.total}%" else "0%",
+                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.PRESENT) null else StatutFinal.PRESENT) })
+                KpiCardCompact(state.lates, if (state.total > 0) "${state.lates * 100 / state.total}%" else "0%",
                     Icons.Default.Schedule, StatusLate, Modifier.weight(1f),
                     isActive = state.statutFilter == StatutFinal.RETARD,
-                    onClick = {
-                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.RETARD) null else StatutFinal.RETARD)
-                    })
-                KpiCard("Absence", state.absents, if (state.total > 0) "${state.absents * 100 / state.total}%" else "0%",
+                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.RETARD) null else StatutFinal.RETARD) })
+                KpiCardCompact(state.absents, if (state.total > 0) "${state.absents * 100 / state.total}%" else "0%",
                     Icons.Default.Cancel, StatusAbsent, Modifier.weight(1f),
                     isActive = state.statutFilter == StatutFinal.ABSENT,
-                    onClick = {
-                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.ABSENT) null else StatutFinal.ABSENT)
-                    })
-                KpiCard("Inscrits", state.total, "Total",
+                    onClick = { viewModel.filterByStatut(if (state.statutFilter == StatutFinal.ABSENT) null else StatutFinal.ABSENT) })
+                KpiCardCompact(state.total, "Total",
                     Icons.Default.People, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
                     isActive = false,
                     onClick = { viewModel.filterByStatut(null) })
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Filtres + Actions
+            // Filtres — scrollables
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    // Dropdown classe
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     state.classes.forEach { c ->
                         FilterChip(
                             selected = state.selectedClasse == c,
                             onClick = { viewModel.filterByClasse(c) },
-                            label = { Text(c, fontSize = 13.sp) },
+                            label = { Text(c, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.primary
@@ -228,11 +223,12 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             )
                         )
                     }
+                    Spacer(Modifier.width(4.dp))
                     state.semestres.forEach { s ->
                         FilterChip(
                             selected = state.selectedSemestre == s,
                             onClick = { viewModel.filterBySemestre(s) },
-                            label = { Text(s, fontSize = 13.sp) },
+                            label = { Text(s, fontSize = 12.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                 selectedLabelColor = MaterialTheme.colorScheme.primary
@@ -246,103 +242,73 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilledTonalButton(
                         onClick = { simEnabled = !simEnabled },
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = if (simEnabled) StatusPresent.copy(alpha = 0.15f)
                             else MaterialTheme.colorScheme.surfaceVariant
                         ),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (simEnabled) "Arreter simulation" else "Simulation live", fontSize = 13.sp)
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (simEnabled) "Stop" else "Live", fontSize = 12.sp)
                     }
 
                     FilledTonalButton(
                         onClick = { viewModel.rafraichir() },
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(10.dp)
+                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Rafraichir", fontSize = 13.sp)
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Rafr.", fontSize = 12.sp)
                     }
 
                     if (state.seanceStatut == StatutSeance.EN_COURS) {
                         Button(
                             onClick = { viewModel.cloturerSeance() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = StatusAbsent,
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(10.dp)
+                            colors = ButtonDefaults.buttonColors(containerColor = StatusAbsent, contentColor = Color.White),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Cloturer", fontSize = 13.sp)
+                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Clot.", fontSize = 12.sp)
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Stats bar
-            if (state.total > 0) {
-                val presentPct = state.presents.toFloat() / state.total
-                val latePct = state.lates.toFloat() / state.total
-                val absentPct = state.absents.toFloat() / state.total
-
-                val animP by animateFloatAsState(presentPct, tween(400), label = "bar-p")
-                val animL by animateFloatAsState(latePct, tween(400), label = "bar-l")
-                val animA by animateFloatAsState(absentPct, tween(400), label = "bar-a")
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(Modifier.weight(animP.coerceAtLeast(0.01f)).height(8.dp).clip(RoundedCornerShape(4.dp))
-                        .background(StatusPresent.copy(alpha = 0.3f)))
-                    Box(Modifier.weight(animL.coerceAtLeast(0.01f)).height(8.dp).clip(RoundedCornerShape(4.dp))
-                        .background(Color.Gray.copy(alpha = 0.3f)))
-                    Box(Modifier.weight(animA.coerceAtLeast(0.01f)).height(8.dp).clip(RoundedCornerShape(4.dp))
-                        .background(StatusAbsent.copy(alpha = 0.3f)))
-                }
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("${state.presents} presents", fontSize = 11.sp, color = StatusPresent)
-                    Text("${state.lates} retards", fontSize = 11.sp, color = StatusLate)
-                    Text("${state.absents} absents", fontSize = 11.sp, color = StatusAbsent)
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            // Table
+            // Table - remplit l'espace restant
             Card(
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("#", Modifier.width(36.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("#", Modifier.width(30.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Matricule", Modifier.width(100.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("Matricule", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Etudiant", Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("Etudiant", Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Statut", Modifier.width(110.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("Statut", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("1er Scan", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("Arrivee", Modifier.width(80.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("2nd Scan", Modifier.width(90.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                        Text("Depart", Modifier.width(80.dp), fontWeight = FontWeight.Bold, fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
@@ -350,8 +316,20 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
                     LazyColumn(Modifier.fillMaxSize()) {
                         items(state.rows, key = { it.id }) { row ->
-                            AttendanceRowItem(row)
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), thickness = 0.5.dp)
+                            AttendanceRowItemCompact(row)
+                        }
+                        if (state.rows.isEmpty()) {
+                            item {
+                                Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.SearchOff, contentDescription = null,
+                                            modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("Aucune donnee pour ce filtre",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -365,11 +343,10 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
     }
 }
 
-// ── KPI Card (cliquable) ──
+// ── KPI Card compact ──
 
 @Composable
-private fun KpiCard(
-    title: String,
+private fun KpiCardCompact(
     value: Int,
     subtitle: String,
     icon: ImageVector,
@@ -379,44 +356,39 @@ private fun KpiCard(
     onClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = modifier.height(130.dp).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+        modifier = modifier.height(80.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                 else MaterialTheme.colorScheme.surface,
-        shadowElevation = if (isActive) 4.dp else 2.dp,
+        shadowElevation = if (isActive) 3.dp else 1.dp,
         border = if (isActive) androidx.compose.foundation.BorderStroke(1.dp, valueColor.copy(alpha = 0.3f)) else null
     ) {
-        Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(title, style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                if (isActive) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(valueColor))
-                }
-                Icon(icon, contentDescription = title, tint = valueColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
-            }
-
-            val animValue by animateIntAsState(
-                targetValue = value,
-                animationSpec = tween(400, easing = FastOutSlowInEasing),
-                label = "kpi-$title"
-            )
+        Row(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, tint = valueColor.copy(alpha = if (isActive) 1f else 0.6f), modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(10.dp))
             Column {
-                Text("$animValue", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
-                    color = valueColor, fontSize = 32.sp)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val animValue by animateIntAsState(
+                    targetValue = value,
+                    animationSpec = tween(400, easing = FastOutSlowInEasing),
+                    label = "kpi-$value"
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("$animValue", fontWeight = FontWeight.Bold, color = valueColor, fontSize = 22.sp)
+                    if (isActive) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(valueColor))
+                    }
+                }
+                Text(subtitle, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
 
-// ── Table Row ──
+// ── Table Row compact ──
 
 @Composable
-private fun AttendanceRowItem(row: AttendanceRow) {
-    var hovered by remember { mutableStateOf(false) }
-    val bgAlpha by animateFloatAsState(if (hovered) 0.06f else 0f, tween(200), label = "hover-bg")
-
+private fun AttendanceRowItemCompact(row: AttendanceRow) {
     val statutColor = when (row.statut) {
         StatutFinal.PRESENT -> StatusPresent
         StatutFinal.RETARD -> StatusLate
@@ -438,30 +410,29 @@ private fun AttendanceRowItem(row: AttendanceRow) {
 
     Row(
         modifier = Modifier.fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = bgAlpha))
-            .clickable { hovered = !hovered }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("${row.id}", Modifier.width(36.dp), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(row.matricule, Modifier.width(100.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+        Text("${row.id}", Modifier.width(30.dp), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(row.matricule, Modifier.width(90.dp), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
         Column(Modifier.weight(1f)) {
-            Text("${row.nom} ${row.prenom}", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+            Text("${row.nom} ${row.prenom}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
         }
 
-        Surface(Modifier.width(110.dp), shape = RoundedCornerShape(8.dp), color = statutBg) {
-            Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(statutColor))
-                Spacer(Modifier.width(6.dp))
-                Text(statutLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = statutColor, textAlign = TextAlign.Center)
+        Surface(Modifier.width(90.dp), shape = RoundedCornerShape(6.dp), color = statutBg) {
+            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(statutColor))
+                Spacer(Modifier.width(4.dp))
+                Text(statutLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = statutColor, textAlign = TextAlign.Center)
             }
         }
 
-        Text(row.heureScanDebut, Modifier.width(90.dp), fontSize = 13.sp,
+        Text(row.heureScanDebut, Modifier.width(80.dp), fontSize = 12.sp,
             color = if (row.heureScanDebut == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             else MaterialTheme.colorScheme.onSurface)
-        Text(row.heureScanFin, Modifier.width(90.dp), fontSize = 13.sp,
+        Text(row.heureScanFin, Modifier.width(80.dp), fontSize = 12.sp,
             color = if (row.heureScanFin == "---") MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             else MaterialTheme.colorScheme.onSurface)
     }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.15f), thickness = 0.5.dp)
 }
