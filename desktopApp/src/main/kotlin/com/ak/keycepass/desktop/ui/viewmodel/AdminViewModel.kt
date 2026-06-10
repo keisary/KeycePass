@@ -60,9 +60,10 @@ data class DashboardState(
     val total: Int = 0,
     val rows: List<AttendanceRow> = emptyList(),
     val seanceStatut: StatutSeance = StatutSeance.PLANIFIE,
-    val selectedClasse: String = "B2_IT",
+    val selectedClasse: String = "Toutes",
     val selectedSemestre: String = "S2_2026",
-    val classes: List<String> = listOf("Toutes", "B1_IT", "B1_MANAGEMENT", "B2_IT", "B2_MANAGEMENT", "B3_IT", "B3_MANAGEMENT"),
+    // Classes chargees depuis la BDD uniquement — pas de valeur hardcodee
+    val classes: List<String> = listOf("Toutes"),
     val semestres: List<String> = listOf("Tous", "S1_2025", "S2_2025", "S1_2026", "S2_2026"),
     val enseignant: TeacherProfile = TeacherProfile(),
     val statutFilter: StatutFinal? = null
@@ -339,11 +340,12 @@ class AdminViewModel {
                     val seanceId = seance[SeanceTable.idSeance]
                     val classeId = seance[SeanceTable.classeId]
 
-                    // Tous les etudiants de la classe
+                    // Tous les etudiants de la classe qui ont un deviceUuid (enrolés)
                     val etudiants = EtudiantTable
                         .selectAll()
                         .where { EtudiantTable.classeId eq classeId }
                         .toList()
+                        .filter { !it[EtudiantTable.deviceUuid].isNullOrEmpty() }
 
                     // Emargements pour cette seance
                     val emargements = EmargementTable
@@ -688,6 +690,36 @@ class AdminViewModel {
                 chargerDonneesDepuisDB()
             } catch (e: Exception) {
                 println("[KeycePass] Erreur ajout seance: ${e.message}")
+            }
+        }
+    }
+
+    fun enregistrerSeance(
+        idSeance: Int?,
+        semaineId: Int,
+        nomMatiere: String,
+        classeId: String,
+        dateJour: String,
+        heureDebut: String,
+        heureFin: String,
+        enseignantId: Int?
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                SeanceSemaineService.enregistrerSeance(
+                    idSeance = idSeance,
+                    semaineId = semaineId,
+                    nomMatiere = nomMatiere,
+                    classeId = classeId,
+                    dateJour = dateJour,
+                    heureDebut = heureDebut,
+                    heureFin = heureFin,
+                    enseignantId = enseignantId
+                )
+                chargerSeancesDeLaSemaine(semaineId)
+                chargerDonneesDepuisDB()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur enregistrement seance: ${e.message}")
             }
         }
     }

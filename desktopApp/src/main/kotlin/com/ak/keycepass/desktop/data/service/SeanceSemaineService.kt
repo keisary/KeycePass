@@ -5,6 +5,7 @@ import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.database.EnseignantTable
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import javax.crypto.Mac
@@ -113,6 +114,55 @@ object SeanceSemaineService {
             result[SeanceTable.idSeance]
         }
     }
+
+    /**
+     * Enregistre ou met à jour une séance de cours pour une semaine donnée.
+     *
+     * @param idSeance Identifiant de la séance existante (si null, une nouvelle séance sera créée)
+     * @param semaineId Identifiant de la semaine parente
+     * @param nomMatiere Nom de la matière (ou "TPE")
+     * @param classeId Classe concernée
+     * @param dateJour Date du cours (format YYYY-MM-DD)
+     * @param heureDebut Heure de début (format HH:MM:SS)
+     * @param heureFin Heure de fin (format HH:MM:SS)
+     * @param enseignantId Identifiant de l'enseignant (nullable)
+     * @return L'identifiant de la séance (créée ou mise à jour)
+     */
+    fun enregistrerSeance(
+        idSeance: Int?,
+        semaineId: Int,
+        nomMatiere: String,
+        classeId: String,
+        dateJour: String,
+        heureDebut: String,
+        heureFin: String,
+        enseignantId: Int? = null
+    ): Int {
+        return transaction {
+            if (idSeance != null) {
+                SeanceTable.update({ SeanceTable.idSeance eq idSeance }) {
+                    it[SeanceTable.nomMatiere] = nomMatiere
+                    it[SeanceTable.heureDebut] = heureDebut
+                    it[SeanceTable.heureFin] = heureFin
+                    it[SeanceTable.enseignantId] = enseignantId
+                }
+                idSeance
+            } else {
+                val result = SeanceTable.insert {
+                    it[SeanceTable.nomMatiere] = nomMatiere
+                    it[SeanceTable.classeId] = classeId
+                    it[SeanceTable.dateJour] = dateJour
+                    it[SeanceTable.heureDebut] = heureDebut
+                    it[SeanceTable.heureFin] = heureFin
+                    it[SeanceTable.statutSeance] = "PLANIFIE"
+                    it[SeanceTable.semaineId] = semaineId
+                    it[SeanceTable.enseignantId] = enseignantId
+                }
+                result[SeanceTable.idSeance]
+            }
+        }
+    }
+
 
     // ─── Enseignants ──────────────────────────────────────────────────────────
 
