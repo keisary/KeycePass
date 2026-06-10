@@ -58,6 +58,7 @@ class AttendanceRepository(
         val role = runCatching { UserRole.valueOf(roleStr) }.getOrDefault(UserRole.ETUDIANT)
 
         // 2. Appel réseau vers le serveur Desktop
+        networkClient.serverBaseUrl = serverUrl
         val succes = networkClient.enroler(matricule, deviceUuid)
         if (!succes) {
             return@withContext EnrolementResult.Erreur(
