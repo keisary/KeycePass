@@ -183,15 +183,10 @@ fun AdminLayout(
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    "The Guy Iruzen",
+                                    "The Guy",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    "Enseignant",
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Box(
@@ -257,7 +252,7 @@ fun AdminLayout(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                "Seance de The Guy Iruzen",
+                                "Seance en cours",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

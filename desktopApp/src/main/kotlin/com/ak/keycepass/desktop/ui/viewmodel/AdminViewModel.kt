@@ -47,7 +47,8 @@ data class DashboardState(
     val selectedSemestre: String = "S2_2026",
     val classes: List<String> = listOf("Toutes", "B1_IT", "B1_MANAGEMENT", "B2_IT", "B2_MANAGEMENT", "B3_IT", "B3_MANAGEMENT"),
     val semestres: List<String> = listOf("Tous", "S1_2025", "S2_2025", "S1_2026", "S2_2026"),
-    val enseignant: TeacherProfile = TeacherProfile()
+    val enseignant: TeacherProfile = TeacherProfile(),
+    val statutFilter: StatutFinal? = null
 )
 
 // ── Entree historique ──
@@ -160,15 +161,17 @@ class AdminViewModel {
         val s = _state.value
         val filtered = if (s.selectedClasse == "Toutes") rows
         else rows.filter { it.classe == s.selectedClasse }
-        val final = if (s.selectedSemestre == "Tous") filtered
+        val withSemestre = if (s.selectedSemestre == "Tous") filtered
         else filtered.filter { it.semestre == s.selectedSemestre }
+        val withStatut = if (s.statutFilter == null) withSemestre
+        else withSemestre.filter { it.statut == s.statutFilter }
 
         _state.value = s.copy(
-            rows = final,
-            presents = final.count { it.statut == StatutFinal.PRESENT },
-            lates = final.count { it.statut == StatutFinal.RETARD },
-            absents = final.count { it.statut == StatutFinal.ABSENT },
-            total = final.size
+            rows = withStatut,
+            presents = withStatut.count { it.statut == StatutFinal.PRESENT },
+            lates = withStatut.count { it.statut == StatutFinal.RETARD },
+            absents = withStatut.count { it.statut == StatutFinal.ABSENT },
+            total = withStatut.size
         )
     }
 
@@ -208,6 +211,11 @@ class AdminViewModel {
             _state.value = _state.value.copy(selectedClasse = classe)
             chargerDonneesMockees(classe)
         }
+    }
+
+    fun filterByStatut(statut: StatutFinal?) {
+        _state.value = _state.value.copy(statutFilter = statut)
+        appliquerFiltres()
     }
 
     fun filterBySemestre(semestre: String) {

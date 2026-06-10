@@ -85,7 +85,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
         }
     }
 
-    var simEnabled by remember { mutableStateOf(false) }
+    var simEnabled by remember { mutableStateOf(true) }  // Auto-demarrage temps reel
 
     LaunchedEffect(simEnabled) {
         if (simEnabled) {
@@ -180,16 +180,30 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
 
             Spacer(Modifier.height(24.dp))
 
-            // KPIs
+            // KPIs — cliquables pour filtrer le tableau
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 KpiCard("Presence", state.presents, if (state.total > 0) "${state.presents * 100 / state.total}%" else "0%",
-                    Icons.Default.CheckCircle, StatusPresent, Modifier.weight(1f))
+                    Icons.Default.CheckCircle, StatusPresent, Modifier.weight(1f),
+                    isActive = state.statutFilter == StatutFinal.PRESENT,
+                    onClick = {
+                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.PRESENT) null else StatutFinal.PRESENT)
+                    })
                 KpiCard("Retard", state.lates, if (state.total > 0) "${state.lates * 100 / state.total}%" else "0%",
-                    Icons.Default.Schedule, StatusLate, Modifier.weight(1f))
+                    Icons.Default.Schedule, StatusLate, Modifier.weight(1f),
+                    isActive = state.statutFilter == StatutFinal.RETARD,
+                    onClick = {
+                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.RETARD) null else StatutFinal.RETARD)
+                    })
                 KpiCard("Absence", state.absents, if (state.total > 0) "${state.absents * 100 / state.total}%" else "0%",
-                    Icons.Default.Cancel, StatusAbsent, Modifier.weight(1f))
+                    Icons.Default.Cancel, StatusAbsent, Modifier.weight(1f),
+                    isActive = state.statutFilter == StatutFinal.ABSENT,
+                    onClick = {
+                        viewModel.filterByStatut(if (state.statutFilter == StatutFinal.ABSENT) null else StatutFinal.ABSENT)
+                    })
                 KpiCard("Inscrits", state.total, "Total",
-                    Icons.Default.People, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f))
+                    Icons.Default.People, MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
+                    isActive = false,
+                    onClick = { viewModel.filterByStatut(null) })
             }
 
             Spacer(Modifier.height(20.dp))
@@ -351,20 +365,34 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
     }
 }
 
-// ── KPI Card ──
+// ── KPI Card (cliquable) ──
 
 @Composable
-private fun KpiCard(title: String, value: Int, subtitle: String, icon: ImageVector, valueColor: Color, modifier: Modifier = Modifier) {
+private fun KpiCard(
+    title: String,
+    value: Int,
+    subtitle: String,
+    icon: ImageVector,
+    valueColor: Color,
+    modifier: Modifier = Modifier,
+    isActive: Boolean = false,
+    onClick: () -> Unit = {}
+) {
     Surface(
-        modifier = modifier.height(130.dp),
+        modifier = modifier.height(130.dp).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 2.dp
+        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                else MaterialTheme.colorScheme.surface,
+        shadowElevation = if (isActive) 4.dp else 2.dp,
+        border = if (isActive) androidx.compose.foundation.BorderStroke(1.dp, valueColor.copy(alpha = 0.3f)) else null
     ) {
         Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                if (isActive) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(valueColor))
+                }
                 Icon(icon, contentDescription = title, tint = valueColor.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
             }
 
