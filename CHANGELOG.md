@@ -1,5 +1,31 @@
 # Changelog KeycePass
 
+## [1.1.0] — 2026-06-10 (Branche iruzen)
+
+### Design — "Nature Morte"
+- **Nouveau thème** inspiré des natures mortes classiques : brun profond, olive, crème, gris chaud
+- Palette volontairement limitée pour un rendu sophistiqué et professionnel
+- Suppression de tous les gradients multicolores
+
+### Interface
+- **Suppression** de l'avatar utilisateur "AD" dans la top bar (profil inutile)
+- **Suppression** de la barre de recherche dans la top bar
+- **Tous les emojis remplacés** par des icônes Material Design vectorielles (Dashboard, QrCodeScanner, CheckCircle, Schedule, Cancel, People, Refresh, Lock, PhoneAndroid, Link, etc.)
+- KPIs redesignés : cartes sobres avec icône colorée, fin des fonds en gradient
+- Boutons avec icône + texte cohérents
+
+### QR Code
+- **Vrai génération de QR Code** via ZXing (com.google.zxing:core 3.5.3)
+- Fin du faux QR en caractères unicode (⬛⬛⬛⬛⬛)
+- Affichage du QR bitmap directement dans l'interface
+- Nouveau fichier : `util/QRCodeGenerator.kt`
+
+### Dépendances
+- Ajout : `com.google.zxing:core:3.5.3`
+
+### Nettoyage
+- Remplacement des prints avec émojis dans ServerManager (`[KeycePass]` logging)
+
 ## [1.0.0] — 2026-06-09 (Branche iruzen)
 
 ### ✨ Nouvelles fonctionnalités (Desktop)
