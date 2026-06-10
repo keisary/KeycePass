@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -34,9 +33,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
 }
 
 dependencies {
     implementation(project(":shared"))
-    implementation(libs.kotlinx.serialization.json)
+    // Les autres dépendances (Room, Jetpack Compose, CameraX) seront déclarées ici
 }

@@ -1,42 +1,57 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
     kotlin("jvm")
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
     application
 }
 
 group = "com.ak.keycepass"
 version = "1.0.0"
 
-dependencies {
-    // Core Compose Desktop
-    implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
-    implementation(compose.materialIconsExtended)
+repositories {
+    mavenCentral()
+    google()
+    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+}
 
-    // Project shared
+dependencies {
+    // Module partagé
     implementation(project(":shared"))
 
-    // Ktor Server (embedded)
-    implementation(libs.ktor.server.netty)
-    implementation(libs.ktor.server.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
-    implementation(libs.ktor.server.websockets)
-    implementation(libs.ktor.server.status.pages)
-
-    // Database (H2 + Exposed)
-    implementation(libs.h2.database)
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.dao)
-    implementation(libs.exposed.jdbc)
-
-    // Coroutines
+    // Kotlin Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.swing)
 
-    // QR Code generation
+    // Ktor Server (CIO engine)
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.websockets)
+    implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.serialization.json)
+
+    // Exposed ORM + SQLite
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.dao)
+    implementation(libs.sqlite.jdbc)
+
+    // Import Excel
+    implementation(libs.apache.poi)
+    implementation(libs.apache.poi.ooxml)
+
+    // Génération QR Code
     implementation(libs.zxing.core)
+    implementation(libs.zxing.javase)
+
+    // Compose Desktop
+    implementation(compose.desktop.currentOs)
+    implementation(compose.material3)
+    implementation(compose.materialIconsExtended)
 }
 
 application {
@@ -44,9 +59,19 @@ application {
     mainClass.set("com.ak.keycepass.desktop.MainKt")
 }
 
+compose.desktop {
+    application {
+        mainClass = "com.ak.keycepass.desktop.MainKt"
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "KeycePass Administration"
+            packageVersion = "1.0.0"
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
     }
 }
-
