@@ -81,7 +81,7 @@ fun AdminLayout(
                         ) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Image(
-                                    painter = painterResource("icons/keycepass_logo.png"),
+                                    painter = painterResource("icons/keycepass_logo.svg"),
                                     contentDescription = "KeycePass",
                                     modifier = Modifier.fillMaxSize().padding(2.dp)
                                 )

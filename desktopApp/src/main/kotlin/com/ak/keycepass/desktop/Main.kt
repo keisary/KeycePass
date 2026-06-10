@@ -37,7 +37,7 @@ fun main() = application {
         },
         onPreviewKeyEvent = { false },
         title = "KeycePass — Administration",
-        icon = painterResource("icons/keycepass_logo.png"),
+        icon = painterResource("icons/keycepass_logo.svg"),
         state = rememberWindowState(size = DpSize(980.dp, 650.dp)),
         alwaysOnTop = false,
         resizable = true
