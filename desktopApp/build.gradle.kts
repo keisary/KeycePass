@@ -4,7 +4,7 @@ plugins {
     kotlin("jvm")
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.compose.multiplatform)
-    application
+    alias(libs.plugins.kotlin.compose)
 }
 
 group = "com.ak.keycepass"
@@ -62,5 +62,7 @@ compose.desktop {
 }
 
 kotlin {
-    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
