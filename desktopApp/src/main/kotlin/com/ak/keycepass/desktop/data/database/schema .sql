@@ -16,3 +16,13 @@ CREATE TABLE IF NOT EXISTS "Etudiant" (
     "classe_id" VARCHAR(50) NOT NULL,
     "device_uuid" VARCHAR(255) UNIQUE NULL
 );
+
+CREATE TABLE IF NOT EXISTS "SeanceSemaine" (
+    "id_semaine" INTEGER PRIMARY KEY AUTOINCREMENT,
+    "classe_id" VARCHAR(50) NOT NULL,
+    "semaine_iso" VARCHAR(10) NOT NULL,
+    "lat_reference" DOUBLE NOT NULL,
+    "lon_reference" DOUBLE NOT NULL,
+    "rayon_metres" INTEGER NOT NULL DEFAULT 200,
+    "token_semaine" VARCHAR(64) NOT NULL
+);
