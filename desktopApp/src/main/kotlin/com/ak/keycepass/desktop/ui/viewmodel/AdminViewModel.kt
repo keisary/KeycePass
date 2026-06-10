@@ -1,6 +1,7 @@
 package com.ak.keycepass.desktop.ui.viewmodel
 
 import com.ak.keycepass.desktop.data.database.EmargementTable
+import com.ak.keycepass.desktop.data.database.EtudiantTable
 import com.ak.keycepass.desktop.data.database.ImportService
 import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.service.SeanceSemaineRow
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import java.awt.image.BufferedImage
 import java.io.File
 
@@ -75,6 +77,18 @@ data class HistoriqueEntry(
     val total: Int
 )
 
+// ── Appareil enrole (backend) ──
+
+data class PairedDevice(
+    val id: Int,
+    val deviceName: String,
+    val deviceId: String,
+    val etudiant: String,
+    val matricule: String,
+    val pairedAt: String,
+    val isActive: Boolean
+)
+
 // ── ViewModel fusionne ──
 
 class AdminViewModel {
@@ -112,6 +126,10 @@ class AdminViewModel {
 
     private val _historiqueBackend = MutableStateFlow<List<HistoriqueEntry>>(emptyList())
     val historiqueBackend: StateFlow<List<HistoriqueEntry>> = _historiqueBackend.asStateFlow()
+
+    // ─── État Appareils enroles ──────────────────────────────────
+    private val _pairedDevices = MutableStateFlow<List<PairedDevice>>(emptyList())
+    val pairedDevices: StateFlow<List<PairedDevice>> = _pairedDevices.asStateFlow()
 
     // ─── Banque d'etudiants mock (par classe) ─────────────────────────
     private val classeData: Map<String, List<Triple<String, String, String>>> = mapOf(
@@ -409,6 +427,50 @@ class AdminViewModel {
             } catch (e: Exception) {
                 println("[KeycePass] Erreur historique: ${e.message}")
                 _historiqueBackend.value = historique
+            }
+        }
+    }
+
+    fun chargerAppareilsEnroles() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val devices = transaction {
+                    EtudiantTable
+                        .selectAll()
+                        .where { EtudiantTable.deviceUuid.isNotNull() }
+                        .mapIndexed { index, row ->
+                            val uuid = row[EtudiantTable.deviceUuid] ?: ""
+                            PairedDevice(
+                                id = index + 1,
+                                deviceName = "Appareil ${uuid.take(8)}...",
+                                deviceId = uuid,
+                                etudiant = "${row[EtudiantTable.prenom]} ${row[EtudiantTable.nom]}",
+                                matricule = row[EtudiantTable.matricule],
+                                pairedAt = "Enrole",
+                                isActive = uuid.isNotEmpty()
+                            )
+                        }
+                }
+                _pairedDevices.value = devices.ifEmpty {
+                    listOf(PairedDevice(0, "Aucun appareil", "", "", "", "", false))
+                }
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement appareils: ${e.message}")
+            }
+        }
+    }
+
+    fun dissocierAppareil(matricule: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                transaction {
+                    EtudiantTable.update({ EtudiantTable.matricule eq matricule }) {
+                        it[deviceUuid] = null
+                    }
+                }
+                chargerAppareilsEnroles()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur dissociation: ${e.message}")
             }
         }
     }
