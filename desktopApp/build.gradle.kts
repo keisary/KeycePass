@@ -40,6 +40,7 @@ dependencies {
 }
 
 application {
+    applicationDefaultJvmArgs = listOf("-Dskiko.renderApi=SOFTWARE_FAST")
     mainClass.set("com.ak.keycepass.desktop.MainKt")
 }
 
