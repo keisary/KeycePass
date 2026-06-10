@@ -38,7 +38,22 @@ fun AdminLayout(
     var cmdPaletteOpen by remember { mutableStateOf(false) }
     var cmdSearch by remember { mutableStateOf("") }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier.fillMaxSize()
+            .onPreviewKeyEvent { event ->
+                // Raccourcis clavier globaux Ctrl+1..4
+                if (event.type == KeyEventType.KeyUp && (event.isCtrlPressed || event.isMetaPressed)) {
+                    when (event.key) {
+                        Key.One -> { onNavigate(Screen.DASHBOARD); true }
+                        Key.Two -> { onNavigate(Screen.QR_MANAGEMENT); true }
+                        Key.Three -> { onNavigate(Screen.ENROLEMENT); true }
+                        Key.Four -> { onNavigate(Screen.HISTORIQUE); true }
+                        Key.K -> { cmdPaletteOpen = true; true }
+                        else -> false
+                    }
+                } else false
+            }
+    ) {
         Row(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             // ===== SIDEBAR =====
             Surface(
@@ -169,7 +184,7 @@ fun AdminLayout(
                     Surface(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                         shape = RoundedCornerShape(12.dp),
-                        color = GreenPresent.copy(alpha = 0.1f),
+                        color = StatusPresent.copy(alpha = 0.1f),
                         tonalElevation = 0.dp
                     ) {
                         Row(
@@ -180,11 +195,11 @@ fun AdminLayout(
                                 modifier = Modifier
                                     .size(10.dp)
                                     .clip(CircleShape)
-                                    .background(GreenPresent)
+                                    .background(StatusPresent)
                             )
                             Spacer(Modifier.width(8.dp))
                             Column {
-                                Text("Serveur actif", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = GreenPresent)
+                                Text("Serveur actif", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = StatusPresent)
                                 Text("Port 8080", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }

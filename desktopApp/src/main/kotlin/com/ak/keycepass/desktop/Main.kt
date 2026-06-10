@@ -26,7 +26,7 @@ fun main() = application {
             appScope.launch { ServerManager.stop() }
             exitApplication()
         },
-        title = "KeycePass - Administration",
+        title = "KeycePass — Administration",
         state = rememberWindowState(size = DpSize(1280.dp, 800.dp))
     ) {
         KeycePassTheme {
