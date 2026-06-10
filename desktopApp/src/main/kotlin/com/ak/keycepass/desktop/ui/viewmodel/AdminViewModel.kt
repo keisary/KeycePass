@@ -1,9 +1,11 @@
 package com.ak.keycepass.desktop.ui.viewmodel
 
-import com.ak.keycepass.desktop.data.database.DatabaseTables.EmargementTable
-import com.ak.keycepass.desktop.data.database.DatabaseTables.EtudiantTable
-import com.ak.keycepass.desktop.data.database.DatabaseTables.SeanceTable
+import com.ak.keycepass.desktop.data.database.EmargementTable
+import com.ak.keycepass.desktop.data.database.EtudiantTable
+import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.database.ImportService
+import com.ak.keycepass.desktop.data.service.SeanceSemaineRow
+import com.ak.keycepass.desktop.data.service.SeanceSemaineService
 import com.ak.keycepass.desktop.data.utils.QrCodeGenerator
 import com.ak.keycepass.desktop.data.server.KtorServer
 import com.ak.keycepass.shared.domain.model.Etudiant
@@ -46,6 +48,14 @@ class AdminViewModel {
     // ─── État : Statistiques de présence ────────────────────────────────────
     private val _statsSeance = MutableStateFlow<SessionStatusDto?>(null)
     val statsSeance: StateFlow<SessionStatusDto?> = _statsSeance.asStateFlow()
+
+    // ─── État : Semaines de la classe sélectionnée ──────────────────────────
+    private val _semaines = MutableStateFlow<List<SeanceSemaineRow>>(emptyList())
+    val semaines: StateFlow<List<SeanceSemaineRow>> = _semaines.asStateFlow()
+
+    // ─── État : Résultat de la création de semaine ───────────────────────────
+    private val _creationSemaineState = MutableStateFlow<CreationSemaineState>(CreationSemaineState.Idle)
+    val creationSemaineState: StateFlow<CreationSemaineState> = _creationSemaineState.asStateFlow()
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -101,14 +111,61 @@ class AdminViewModel {
     }
 
     /**
-     * Génère le QR Code de présence pour une séance journalière.
-     * Ce QR Code change à chaque séance (anti-fraude).
+     * Crée une nouvelle semaine d'enseignement pour une classe.
+     * L'admin saisit les coordonnées GPS du lieu de cours.
+     *
+     * @param classeId La classe concernée
+     * @param semaineIso La semaine au format ISO (ex. "2026-W24")
+     * @param lat Latitude GPS du lieu de cours (saisie depuis Maps par l'admin)
+     * @param lon Longitude GPS du lieu de cours
      */
-    fun genererQrPresence(seanceId: Int) {
+    fun creerSemaine(classeId: String, semaineIso: String, lat: Double, lon: Double) {
+        _creationSemaineState.value = CreationSemaineState.EnCours
         scope.launch {
-            val jeton = "${seanceId}_${System.currentTimeMillis()}"
-            _qrCodeImage.value = QrCodeGenerator.genererQrPresence(seanceId, jeton)
+            val id = SeanceSemaineService.creerSemaine(classeId, semaineIso, lat, lon, rayonM = 200)
+            _creationSemaineState.value = if (id != null) {
+                chargerSemaines(classeId)
+                CreationSemaineState.Succes(id)
+            } else {
+                CreationSemaineState.Erreur("Une semaine existe déjà pour $classeId / $semaineIso")
+            }
         }
+    }
+
+    /**
+     * Charge les semaines disponibles pour la classe sélectionnée.
+     */
+    fun chargerSemaines(classeId: String) {
+        scope.launch {
+            _semaines.value = SeanceSemaineService.getSemainesParClasse(classeId)
+        }
+    }
+
+    /**
+     * Génère le QR Code de présence hebdomadaire pour une semaine.
+     * Ce QR Code est affiché par l'administration et scanné une fois par semaine
+     * par les étudiants pour enregistrer leurs présences.
+     *
+     * @param semaineId L'identifiant de la semaine dans la base
+     */
+    fun genererQrPresenceSemaine(semaineId: Int) {
+        scope.launch {
+            val semaine = SeanceSemaineService.getSemaineById(semaineId)
+            if (semaine == null) {
+                return@launch
+            }
+            val serverUrl = KtorServer.getServerUrl()
+            _qrCodeImage.value = QrCodeGenerator.genererQrPresenceSemaine(
+                semaineId = semaine.idSemaine,
+                classeId = semaine.classeId,
+                tokenSemaine = semaine.tokenSemaine,
+                serverUrl = serverUrl
+            )
+        }
+    }
+
+    fun resetCreationSemaineState() {
+        _creationSemaineState.value = CreationSemaineState.Idle
     }
 
     /**
@@ -171,4 +228,12 @@ sealed class ImportState {
         val avertissements: List<String>
     ) : ImportState()
     data class Erreur(val message: String) : ImportState()
+}
+
+// ─── États possibles pour la création d'une semaine ───────────────────────────
+sealed class CreationSemaineState {
+    data object Idle : CreationSemaineState()
+    data object EnCours : CreationSemaineState()
+    data class Succes(val semaineId: Int) : CreationSemaineState()
+    data class Erreur(val message: String) : CreationSemaineState()
 }
