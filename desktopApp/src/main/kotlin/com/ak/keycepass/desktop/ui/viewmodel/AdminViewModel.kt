@@ -1,6 +1,8 @@
 package com.ak.keycepass.desktop.ui.viewmodel
 
+import com.ak.keycepass.desktop.data.database.EmargementTable
 import com.ak.keycepass.desktop.data.database.ImportService
+import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.service.SeanceSemaineRow
 import com.ak.keycepass.desktop.data.service.SeanceSemaineService
 import com.ak.keycepass.desktop.data.utils.QrCodeGenerator
@@ -107,6 +109,9 @@ class AdminViewModel {
 
     private val _creationSemaineState = MutableStateFlow<CreationSemaineState>(CreationSemaineState.Idle)
     val creationSemaineState: StateFlow<CreationSemaineState> = _creationSemaineState.asStateFlow()
+
+    private val _historiqueBackend = MutableStateFlow<List<HistoriqueEntry>>(emptyList())
+    val historiqueBackend: StateFlow<List<HistoriqueEntry>> = _historiqueBackend.asStateFlow()
 
     // ─── Banque d'etudiants mock (par classe) ─────────────────────────
     private val classeData: Map<String, List<Triple<String, String, String>>> = mapOf(
@@ -274,27 +279,39 @@ class AdminViewModel {
     fun importerExcel(fichier: File) {
         _importState.value = ImportState.Chargement
         scope.launch(Dispatchers.IO) {
-            val resultat = ImportService.importerDepuisExcel(fichier)
-            _importState.value = if (resultat.erreurs.isEmpty()) {
-                ImportState.Succes(resultat.lignesImportees, resultat.totalLignes)
-            } else {
-                ImportState.SuccesAvecAvertissements(
-                    resultat.lignesImportees, resultat.totalLignes, resultat.erreurs
-                )
+            try {
+                val resultat = ImportService.importerDepuisExcel(fichier)
+                _importState.value = if (resultat.erreurs.isEmpty()) {
+                    ImportState.Succes(resultat.lignesImportees, resultat.totalLignes)
+                } else {
+                    ImportState.SuccesAvecAvertissements(
+                        resultat.lignesImportees, resultat.totalLignes, resultat.erreurs
+                    )
+                }
+                chargerToutesLesClasses()
+            } catch (e: Exception) {
+                _importState.value = ImportState.Erreur(e.message ?: "Erreur inconnue")
             }
-            chargerToutesLesClasses()
         }
     }
 
     fun chargerToutesLesClasses() {
         scope.launch(Dispatchers.IO) {
-            _classes.value = ImportService.getAllClasses()
+            try {
+                _classes.value = ImportService.getAllClasses()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement classes: ${e.message}")
+            }
         }
     }
 
     fun selectionnerClasse(classeId: String) {
         scope.launch(Dispatchers.IO) {
-            _etudiants.value = ImportService.getEtudiantsParClasse(classeId)
+            try {
+                _etudiants.value = ImportService.getEtudiantsParClasse(classeId)
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur selection classe: ${e.message}")
+            }
         }
     }
 
@@ -351,6 +368,49 @@ class AdminViewModel {
 
     fun resetImportState() {
         _importState.value = ImportState.Idle
+    }
+
+    fun chargerHistorique(classeId: String = "Toutes") {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val entries = transaction {
+                    val seances = SeanceTable
+                        .selectAll()
+                        .orderBy(SeanceTable.dateJour to org.jetbrains.exposed.sql.SortOrder.DESC)
+                        .limit(10)
+                        .map { seance ->
+                            val seanceId = seance[SeanceTable.idSeance]
+                            val emargements = EmargementTable
+                                .selectAll()
+                                .where { EmargementTable.seanceId eq seanceId }
+
+                            val presents = emargements.count { it[EmargementTable.statutFinal] == "PRESENT" }
+                            val retards = emargements.count { it[EmargementTable.statutFinal] == "RETARD" }
+                            val absents = emargements.count { it[EmargementTable.statutFinal] == "ABSENT" }
+                            val total = presents + retards + absents
+                            val date = seance[SeanceTable.dateJour] ?: ""
+                            val label = seance[SeanceTable.nomMatiere] ?: "Seance"
+
+                            HistoriqueEntry(
+                                date = date.takeLast(5),
+                                label = label,
+                                presents = presents,
+                                retards = retards,
+                                absents = absents,
+                                total = total
+                            )
+                        }
+                    seances.ifEmpty {
+                        // Fallback vers donnees mockees si aucune seance en DB
+                        historique
+                    }
+                }
+                _historiqueBackend.value = entries
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur historique: ${e.message}")
+                _historiqueBackend.value = historique
+            }
+        }
     }
 
     fun onDestroy() { scope.cancel() }
