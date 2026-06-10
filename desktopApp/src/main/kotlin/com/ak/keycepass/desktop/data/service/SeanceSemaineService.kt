@@ -2,6 +2,7 @@ package com.ak.keycepass.desktop.data.service
 
 import com.ak.keycepass.desktop.data.database.SeanceSemaineTable
 import com.ak.keycepass.desktop.data.database.SeanceTable
+import com.ak.keycepass.desktop.data.database.EnseignantTable
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
@@ -113,6 +114,79 @@ object SeanceSemaineService {
         }
     }
 
+    // ─── Enseignants ──────────────────────────────────────────────────────────
+
+    /**
+     * Crée un enseignant dans la base de données.
+     */
+    fun creerEnseignant(matricule: String, nom: String, prenom: String): Int? {
+        return transaction {
+            val existante = EnseignantTable
+                .selectAll()
+                .where { EnseignantTable.matriculeEnseignant eq matricule }
+                .firstOrNull()
+
+            if (existante != null) return@transaction null
+
+            val result = EnseignantTable.insert {
+                it[EnseignantTable.matriculeEnseignant] = matricule
+                it[EnseignantTable.nom] = nom
+                it[EnseignantTable.prenom] = prenom
+            }
+            result[EnseignantTable.idEnseignant]
+        }
+    }
+
+    /**
+     * Récupère tous les enseignants.
+     */
+    fun getTousLesEnseignants(): List<EnseignantRow> {
+        return transaction {
+            EnseignantTable
+                .selectAll()
+                .map {
+                    EnseignantRow(
+                        idEnseignant = it[EnseignantTable.idEnseignant],
+                        matriculeEnseignant = it[EnseignantTable.matriculeEnseignant],
+                        nom = it[EnseignantTable.nom],
+                        prenom = it[EnseignantTable.prenom],
+                        deviceUuid = it[EnseignantTable.deviceUuid]
+                    )
+                }
+        }
+    }
+
+    // ─── Séances d'une semaine ────────────────────────────────────────────────
+
+    /**
+     * Récupère toutes les séances associées à une semaine.
+     */
+    fun getSeancesParSemaine(semaineId: Int): List<SeanceRow> {
+        return transaction {
+            (SeanceTable leftJoin EnseignantTable)
+                .selectAll()
+                .where { SeanceTable.semaineId eq semaineId }
+                .map {
+                    val profNom = it.getOrNull(EnseignantTable.nom)
+                    val profPrenom = it.getOrNull(EnseignantTable.prenom)
+                    val nomComplet = if (profNom != null && profPrenom != null) "$profPrenom $profNom" else null
+
+                    SeanceRow(
+                        idSeance = it[SeanceTable.idSeance],
+                        nomMatiere = it[SeanceTable.nomMatiere],
+                        classeId = it[SeanceTable.classeId],
+                        dateJour = it[SeanceTable.dateJour],
+                        heureDebut = it[SeanceTable.heureDebut],
+                        heureFin = it[SeanceTable.heureFin],
+                        statutSeance = it[SeanceTable.statutSeance],
+                        enseignantId = it[SeanceTable.enseignantId],
+                        enseignantNomComplet = nomComplet,
+                        semaineId = it[SeanceTable.semaineId]
+                    )
+                }
+        }
+    }
+
     // ─── Récupération ─────────────────────────────────────────────────────────
 
     /**
@@ -180,7 +254,7 @@ object SeanceSemaineService {
     }
 }
 
-// ─── Data class de retour ─────────────────────────────────────────────────────
+// ─── Data classes de retour ───────────────────────────────────────────────────
 
 data class SeanceSemaineRow(
     val idSemaine: Int,
@@ -190,4 +264,25 @@ data class SeanceSemaineRow(
     val lonReference: Double,
     val rayonMetres: Int,
     val tokenSemaine: String
+)
+
+data class EnseignantRow(
+    val idEnseignant: Int,
+    val matriculeEnseignant: String,
+    val nom: String,
+    val prenom: String,
+    val deviceUuid: String?
+)
+
+data class SeanceRow(
+    val idSeance: Int,
+    val nomMatiere: String,
+    val classeId: String,
+    val dateJour: String,
+    val heureDebut: String,
+    val heureFin: String,
+    val statutSeance: String,
+    val enseignantId: Int?,
+    val enseignantNomComplet: String?,
+    val semaineId: Int?
 )

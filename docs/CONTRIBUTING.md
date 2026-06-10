@@ -9,11 +9,12 @@
 ### Conventions de branches
 
 ```
+
 feature/membre-1-shared      → M1 (Modèles partagés)
 feature/membre-2-mobile      → M2 (UI Mobile)
 feature/membre-3-camera      → M3 (CameraX + QR)
 feature/membre-4-data        → M4 (Room + Sécurité)
-feature/iruzen               → M5 (Desktop — fait)
+iruzen                       → M5 (Desktop — livré sur main)
 feature/membre-6-server      → M6 (API + DB)
 ```
 
