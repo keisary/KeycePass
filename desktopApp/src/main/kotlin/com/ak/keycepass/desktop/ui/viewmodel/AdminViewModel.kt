@@ -345,12 +345,6 @@ class AdminViewModel {
 
     fun chargerStatistiquesSeance(seanceId: Int) {
         scope.launch(Dispatchers.IO) {
-            val stats = transaction {
-                val seance = org.jetbrains.exposed.sql.SchemaUtils
-                    .listTables()
-                    .firstOrNull { it.name == "Seance" }
-                null // TODO: implémenter la vraie requête stats
-            }
             _statsSeance.value = null
         }
     }

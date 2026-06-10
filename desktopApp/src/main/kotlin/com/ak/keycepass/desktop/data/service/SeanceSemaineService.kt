@@ -1,7 +1,7 @@
 package com.ak.keycepass.desktop.data.service
 
-import com.ak.keycepass.desktop.data.database.DatabaseTables.SeanceSemaineTable
-import com.ak.keycepass.desktop.data.database.DatabaseTables.SeanceTable
+import com.ak.keycepass.desktop.data.database.SeanceSemaineTable
+import com.ak.keycepass.desktop.data.database.SeanceTable
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll

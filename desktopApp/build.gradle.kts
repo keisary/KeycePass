@@ -11,12 +11,6 @@ plugins {
 group = "com.ak.keycepass"
 version = "1.0.0"
 
-repositories {
-    mavenCentral()
-    google()
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
-}
-
 dependencies {
     // Module partagé
     implementation(project(":shared"))
@@ -52,22 +46,6 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation(compose.materialIconsExtended)
-}
-
-application {
-    applicationDefaultJvmArgs = listOf("-Dskiko.renderApi=SOFTWARE_FAST")
-    mainClass.set("com.ak.keycepass.desktop.MainKt")
-}
-
-compose.desktop {
-    application {
-        mainClass = "com.ak.keycepass.desktop.MainKt"
-        nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "KeycePass Administration"
-            packageVersion = "1.0.0"
-        }
-    }
 }
 
 kotlin {
