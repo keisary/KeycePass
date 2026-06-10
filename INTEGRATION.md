@@ -1,61 +1,67 @@
 # KeycePass — Note d'Intégration
 
-> Fusion des branches `iruzen` (UI Compose Desktop) et `admin-desktop` (backend Ktor/SQLite)
-> Branche de travail : `feature/integration`
+> Branche `iruzen` — toutes les fonctionnalités fusionnées et fonctionnelles.
+> Dernière mise à jour : 10/06/2026
 
 ---
 
 ## 1. Architecture générale
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Fenêtre Compose                    │
-│  ┌────────────────────────────────────────────────┐ │
-│  │               AdminLayout                        │ │
-│  │  ┌──────┐ ┌───────────┐ ┌──────────┐ ┌──────┐ │ │
-│  │  │Dash. │ │ QR Codes  │ │Pairages  │ │Hist. │ │ │
-│  │  └──────┘ └───────────┘ └──────────┘ └──────┘ │ │
-│  │  │ mock)  │  (ZXing)   │(enrolemt) │(stats) │ │
-│  └────────────────────────────────────────────────┘ │
-│                         │                            │
-│              ┌──────────┴──────────┐                │
-│              │  AdminViewModel     │                │
-│              │ (mock + backend)    │                │
-│              └──────────┬──────────┘                │
-└─────────────────────────┼──────────────────────────┘
-                          │
-    ┌─────────────────────┼─────────────────────┐
-    │                     │                       │
-    ▼                     ▼                       ▼
-┌─────────────┐  ┌────────────────┐  ┌──────────────────┐
-│ Ktor Server │  │  Exposed ORM   │  │  Fichiers        │
-│ :8080       │  │  (SQLite)      │  │  (Excel, images) │
-│ 7 endpoints │  │  5 tables      │  │                  │
-└─────────────┘  └────────────────┘  └──────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                  Fenêtre Compose Desktop                 │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │                AdminLayout                          │ │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐  │ │
+│  │  │Dashboard │ │QR Codes  │ │Pairages  │ │Hist. │  │ │
+│  │  │(DB+mock) │ │(ZXing)   │ │(DB)      │ │(DB)  │  │ │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────┘  │ │
+│  └───────────────────┬────────────────────────────────┘ │
+│                      │                                  │
+│              ┌───────┴────────┐                         │
+│              │AdminViewModel  │                         │
+│              │(backend réel)  │                         │
+│              └───────┬────────┘                         │
+│                      │                                  │
+│    ┌─────────────────┼─────────────────────┐            │
+│    │                 │                     │            │
+│    ▼                 ▼                     ▼            │
+│┌──────────┐   ┌────────────┐   ┌────────────────────┐  │
+││ Ktor API │   │ Exposed    │   │ MdnsService        │  │
+││ :8080    │   │ (SQLite)   │   │ keycepass.local    │  │
+││ 8 pts    │   │ 5 tables   │   │ (JmDNS)            │  │
+│└──────────┘   └────────────┘   └────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## 2. Modules
 
-### `desktopApp/` — Application Desktop (Compose Desktop + Ktor)
+### `desktopApp/` — Application Desktop (Compose Desktop + Ktor + mDNS)
 
 | Package | Rôle |
 |---|---|
-| `ui/` | Composants Compose Desktop (AdminLayout, écrans, thème) |
-| `ui/viewmodel/AdminViewModel.kt` | ViewModel fusionné (données mockées + méthodes backend) |
-| `ui/screens/` | 4 écrans : Dashboard, QRManagement, Enrolement, Historique |
-| `data/database/` | Exposed ORM : DatabaseManager, DatabaseTables (5 tables), ImportService |
-| `data/server/KtorServer.kt` | Serveur REST Ktor (7 endpoints) |
-| `data/service/SeanceSemaineService.kt` | Logique semaines d'enseignement + tokens HMAC |
+| `ui/` | Composants Compose Desktop (AdminLayout, 4 écrans, thème monochrome) |
+| `ui/viewmodel/AdminViewModel.kt` | ViewModel fusionné (méthodes backend réelles + fallback mock) |
+| `ui/screens/DashboardScreen.kt` | KPIs, filtre promo/classe/semestre, recherche directe, table paginée, export CSV |
+| `ui/screens/QRManagementScreen.kt` | QR ZXing, import Excel, création semaines GPS, sauvegarde PNG |
+| `ui/screens/GestionEnrolementScreen.kt` | Liste appareils enrôlés (deviceUuid non nul) + dissociation |
+| `ui/screens/HistoriqueScreen.kt` | Stats DB, sélecteur période (semaine/mois/tout), export CSV |
+| `data/database/` | Exposed ORM : DatabaseManager, 5 tables, ImportService |
+| `data/server/KtorServer.kt` | Serveur REST Ktor (8 endpoints) |
+| `data/server/MdnsService.kt` | Annonce mDNS `keycepass.local` (JmDNS) |
+| `data/service/SeanceSemaineService.kt` | Logique semaines + tokens HMAC-SHA256 |
 | `data/utils/` | GeoUtils (Haversine), QrCodeGenerator (ZXing) |
-| `Main.kt` | Point d'entrée : init DB → start Ktor → fenêtre |
-| `Screen.kt` | Énumération des 4 écrans de navigation |
+| `Main.kt` | Point d'entrée : init DB → start Ktor → mDNS → fenêtre |
+| `Screen.kt` | Énumération : DASHBOARD, QR_MANAGEMENT, ENROLEMENT, HISTORIQUE |
+| `resources/icons/keycepass_logo.svg` | Logo nœud métallique (utilisateur) |
 
 ### `shared/` — Module partagé (KMP)
 
 | Package | Rôle |
 |---|---|
 | `domain/model/` | Etudiant, Seance, Emargement, StatutFinal, StatutSeance |
-| `network/` | DTOs sérialisables : ScanPayload, ScanResponse, SessionStatusDto, SeanceCouranteDto |
+| `domain/utils/StatutUtils.kt` | Calcul statut (PRESENT/RETARD/ABSENT) selon horaires |
+| `network/` | DTOs : ScanPayload, ScanResponse, SessionStatusDto, SeanceCouranteDto |
 
 ## 3. Schéma Base de Données (Exposed / SQLite)
 
@@ -70,6 +76,7 @@
 │ classeId     │     │ rayonMetres      │
 │ email        │     │ tokenSemaine     │
 │ motDePasse   │     └────────┬─────────┘
+│ deviceUuid   │              │
 └──────────────┘              │
          │                    │
          │              ┌─────▼──────────┐
@@ -90,35 +97,54 @@
     │ id_emargement │           │
     │ etudiantId ───┤           │
     │ seanceId ─────┼───────────┤
-    │ scanDebut     │           │
-    │ scanFin       │           │
+    │ horodatageScanDebut │     │
+    │ horodatageScanFin   │     │
     │ statutFinal   │           │
     │ latScan       │           │
     │ lonScan       │           │
     └───────────────┘           │
                          ┌──────▼──────┐
-                         │ Enseignant  │
+                         │ Token       │
                          │─────────────│
-                         │ id_ensign.  │
-                         │ nom         │
-                         │ prenom      │
-                         │ email       │
+                         │ id_token    │
+                         │ valeur      │
+                         │ dateExpir.  │
                          └─────────────┘
 ```
+
+**5 tables** : Etudiant, Seance, SeanceSemaine, Emargement, Token
 
 ## 4. Endpoints Ktor (serveur :8080)
 
 | Méthode | Route | Description |
 |---|---|---|
-| POST | `/api/enrolement` | Enregistre l'UUID appareil d'un étudiant |
+| POST | `/api/enrolement` | Enregistre l'UUID appareil d'un étudiant (pairage) |
 | POST | `/api/scan` | Soumet un scan (présence) avec coordonnées GPS |
 | GET | `/api/semaine/{id}/seance-courante` | Récupère la séance active pour une semaine |
 | GET | `/api/statistiques/seance/{id}` | Stats d'une séance (P/R/A) |
 | GET | `/api/statistiques/etudiant/{matricule}` | Stats par étudiant |
 | POST | `/api/cloture` | Clôture une séance (admin) |
 | POST | `/api/sync` | Synchronisation différée (mobile → serveur) |
+| POST | `/api/etudiants` | Liste des étudiants (filtrable par classe) |
 
-## 5. Workflow d'utilisation
+## 5. mDNS — Découverte réseau
+
+Le serveur Ktor annonce automatiquement sa présence via **JmDNS** :
+
+```
+[mDNS] keycepass.local annoncé sur le réseau (port 8080)
+```
+
+- Le nom **`keycepass.local`** est résolvable par tout appareil sur le réseau local
+- Les QR codes intègrent `http://keycepass.local:8080` au lieu d'une IP fixe
+- Plus besoin de regénérer les QR si l'IP change
+- L'arrêt de l'application désenregistre le service proprement
+
+Prérequis pour le mobile :
+- Android résout nativement `.local` via mDNS
+- iOS nécessite Bonjour (actif par défaut)
+
+## 6. Workflow d'utilisation
 
 ### Import des étudiants (admin)
 ```
@@ -131,7 +157,7 @@ ImportService.importerDepuisExcel()
 Table Etudiant (SQLite)
     │
     ▼
-Charger les classes disponibles
+Charger les classes disponibles dans les filtres
 ```
 
 ### Création d'une semaine (admin)
@@ -145,60 +171,112 @@ SeanceSemaineService.creerSemaine()
 Génération token HMAC
     │
     ▼
-QR code (ZXing) affiché à l'écran
+QR code (ZXing) affiché à l'écran (contient keycepass.local:8080)
     │
     ▼
 Étudiants scannent → Appareil enrôlé → Vérification géo (Haversine 200m)
 ```
 
-### Scan étudiant (mobile, futur)
+### Scan étudiant (mobile)
 ```
-QR scanné → Requête GET /api/semaine/{id}/seance-courante
+QR scanné → requête GET /api/semaine/{id}/seance-courante
     │
     ▼
-Seance trouvée → POST /api/scan (avec lat/lon GPS)
+Séance trouvée → POST /api/scan (avec lat/lon GPS + UUID appareil)
     │
     ▼
-Vérification HMAC token + Haversine 200m
+Vérification HMAC + Haversine + UUID appareil connu
     │
     ▼
-Statut calculé : PRESENT / RETARD / ABSENT / EN_ATTENTE
+Statut : PRESENT / RETARD / ABSENT / EN_ATTENTE
 ```
 
-## 6. Anti-fraude
+### Dashboard (admin)
+```
+Ouverture → charge les stats depuis la DB (ou mock si vide)
+    │
+    ▼
+Filtres par promo / classe / statut
+    │
+    ▼
+Recherche en direct (nom / prénom / matricule)
+    │
+    ▼
+Export CSV avec JFileChooser
+```
+
+### Pairage appareil
+```
+Admin génère QR → l'étudiant scanne avec l'app mobile
+    │
+    ▼
+POST /api/enrolement { matricule, nom, prenom, deviceUuid, deviceName }
+    │
+    ▼
+UPDATE Etudiant SET deviceUuid = ?
+    │
+    ▼
+Visible dans l'écran Pairages (avec possibilité de dissociation)
+```
+
+## 7. Anti-fraude
 
 - **Token HMAC** : chaque semaine a un token signé HMAC-SHA256 opaque (64 hex)
 - **Géolocalisation** : Haversine vérifie que le scan est dans le rayon (200m défaut)
 - **UUID appareil** : chaque étudiant enrôle son téléphone (1 appareil par étudiant)
 - **Double scan** : un étudiant ne peut scanner qu'une fois par séance
 
-## 7. Statut du projet (v2.0.0)
+## 8. Statut du projet (v2.1.0)
 
-- [x] **M1** — Dashboard avec liste des présences (mock + vrai)
-- [x] **M2** — QR Codes (ZXing génération + serveur Ktor + vérification HMAC)  ← BACKEND OK
-- [ ] **M3** — Enrolement des appareils (UI en cours)
-- [ ] **M4** — Historique + Statistiques (backlog)
-- [x] **M5** — Build distribution + lanceur desktop ✅
-- [ ] **M6** — Synchronisation réseau (backlog)
+| Module | Statut |
+|---|---|
+| M1 — Dashboard (stats DB + recherche + export CSV) | ✅ |
+| M2 — QR Codes ZXing + HMAC | ✅ |
+| M3 — Enrolement appareils (DB + UI) | ✅ |
+| M4 — Historique + Statistiques + période | ✅ |
+| M5 — Build distribution + lanceur .bat | ✅ |
+| M6 — Serveur Ktor + API REST | ✅ |
+| M7 — Sync différé mobile (POST /api/sync) | ✅ |
+| M8 — mDNS (keycepass.local) | ✅ |
+| Logo — SVG utilisateur intégré | ✅ |
 
-Légende : ✅ fait sur `feature/integration` | 🟡 UI faite (mock) / 💡 backend prêt
+Tout est fonctionnel et compilé (`installDist` BUILD SUCCESSFUL).
 
-## 8. Déploiement (local)
+## 9. Déploiement (local)
 
 ```bash
+# Pull la dernière version
+git pull origin iruzen
+
 # Build distribution
 ./gradlew :desktopApp:installDist
 
-# Lancer (via le bureau)
-Double-clic sur KeycePass_Launch.bat
-
-# OU via le projet
-./gradlew :desktopApp:run   # attention : fenêtre invisible (Session 0)
+# Lancer
+KeycePass_Launch.bat    # (sur le bureau)
 ```
 
-Le lanceur `.bat` sur le bureau utilise `javaw` avec `-classpath "lib\*"` et
-`-Dskiko.renderApi=SOFTWARE_FAST` (contourne le bug GPU AMD/Radeon).
+Le lanceur utilise `javaw` avec :
+- `-classpath "lib\*"` (wildcard Java — contourne limite 8191 chars de cmd.exe)
+- `-Dskiko.renderApi=SOFTWARE_FAST` (contourne le bug GPU AMD/Radeon)
+
+> ⚠️ Ne PAS utiliser `./gradlew run` : le daemon Gradle tourne en Session 0 (services),
+> ce qui rend les fenêtres invisibles pour l'utilisateur.
+
+### Vérifier le bon fonctionnement
+
+1. Lancer `KeycePass_Launch.bat`
+2. Vérifier dans le terminal :
+   ```
+   [KeycePass] Base de données initialisée
+   [KeycePass] Serveur démarré sur http://192.168.x.x:8080
+   [mDNS] keycepass.local annoncé sur le réseau (port 8080)
+   ```
+3. Depuis un navigateur (même PC ou mobile) :
+   ```
+   http://keycepass.local:8080/api/etudiants
+   ```
+4. Si ça répond → tout fonctionne
 
 ---
 
-*Documentation générée le 10/06/2026 — Branche `feature/integration`*
+*Documentation générée le 10/06/2026 — Branche `iruzen`*
