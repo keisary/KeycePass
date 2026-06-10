@@ -36,17 +36,30 @@ object QrCodeGenerator {
     }
 
     /**
-     * Génère un QR Code de présence pour une séance journalière.
-     * Ce QR code change à chaque séance pour empêcher la fraude.
+     * Génère un QR Code de présence **hebdomadaire** pour une classe.
      *
-     * Contenu : keycepass://presence?seanceId={seanceId}&dateJeton={dateJeton}
+     * Ce QR code est affiché par l'administration chaque semaine.
+     * Il est unique par classe par semaine et ne change pas au cours de la semaine.
      *
-     * @param seanceId L'identifiant unique de la séance
-     * @param dateJeton Jeton temporel basé sur la date et l'heure (anti-fraude)
+     * Contenu : keycepass://presence?semaineId={id}&classeId={cId}&token={tok}&serverUrl={url}
+     *
+     * Le [tokenSemaine] est un HMAC-SHA256 signé côté serveur (anti-falsification).
+     * Le [serverUrl] permet à l'app Android de connaître l'adresse du serveur Desktop.
+     *
+     * @param semaineId L'identifiant unique de la semaine dans la base
+     * @param classeId L'identifiant de la classe
+     * @param tokenSemaine Le token HMAC-SHA256 généré par SeanceSemaineService
+     * @param serverUrl L'URL du serveur Desktop (ex. "http://192.168.1.10:8080")
      * @return BufferedImage du QR code
      */
-    fun genererQrPresence(seanceId: Int, dateJeton: String): BufferedImage {
-        val contenu = "keycepass://presence?seanceId=$seanceId&jeton=$dateJeton"
+    fun genererQrPresenceSemaine(
+        semaineId: Int,
+        classeId: String,
+        tokenSemaine: String,
+        serverUrl: String
+    ): BufferedImage {
+        val encodedUrl = java.net.URLEncoder.encode(serverUrl, "UTF-8")
+        val contenu = "keycepass://presence?semaineId=$semaineId&classeId=$classeId&token=$tokenSemaine&serverUrl=$encodedUrl"
         return genererQrCode(contenu)
     }
 
