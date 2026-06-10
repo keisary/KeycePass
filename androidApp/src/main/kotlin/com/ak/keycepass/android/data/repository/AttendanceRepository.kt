@@ -9,6 +9,7 @@ import com.ak.keycepass.android.data.network.NetworkClient
 import com.ak.keycepass.shared.domain.utils.StatutUtils
 import com.ak.keycepass.shared.network.ScanPayload
 import com.ak.keycepass.shared.network.ScanType
+import com.ak.keycepass.shared.network.SeanceCouranteDto
 import com.ak.keycepass.shared.network.SessionStatusDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -75,16 +76,22 @@ class AttendanceRepository(
     /**
      * Traite le premier scan du QR Code de présence (arrivée en cours).
      *
-     * Format QR Code de présence :
-     * keycepass://presence?seanceId=42&jeton=42_1749515640000
+     * Nouveau format QR Code de présence (hebdomadaire) :
+     * keycepass://presence?semaineId=3&classeId=B2_IT&token=XXX&serverUrl=http://...
      *
-     * Stocke le résultat localement en Room (en attente du second scan).
+     * L'app résout d'abord la séance courante via [resolveSeanceCourante], puis
+     * envoie le scan avec les coordonnées GPS optionnelles.
      *
      * @param contenuQr Contenu du QR Code de présence scanné.
-     * @param heureDebutCours Heure officielle de début du cours (depuis la séance locale).
+     * @param lat Latitude GPS de l'étudiant au moment du scan (nullable).
+     * @param lon Longitude GPS de l'étudiant au moment du scan (nullable).
      * @return [ScanResult] avec le statut provisoire ou une erreur.
      */
-    suspend fun enregistrerPremierScan(contenuQr: String): ScanResult = withContext(Dispatchers.IO) {
+    suspend fun enregistrerPremierScan(
+        contenuQr: String,
+        lat: Double? = null,
+        lon: Double? = null
+    ): ScanResult = withContext(Dispatchers.IO) {
         val params = parseQrParams(contenuQr)
         val seanceId = params["seanceId"]?.toIntOrNull()
             ?: return@withContext ScanResult.Erreur("QR Code de présence invalide.")
@@ -120,15 +127,23 @@ class AttendanceRepository(
             )
         )
 
-        // Envoyer le scan de début au serveur Desktop
+        // Envoyer le scan de début au serveur Desktop (avec coordonnées GPS)
         val payload = ScanPayload(
             matricule = matricule,
             deviceUuid = deviceUuid,
             seanceId = seanceId,
             timestamp = heureActuelle,
-            scanType = ScanType.DEBUT
+            scanType = ScanType.DEBUT,
+            lat = lat,
+            lon = lon
         )
-        networkClient.envoyerScan(payload)
+        val response = networkClient.envoyerScan(payload)
+
+        // Vérifier si le serveur a refusé pour cause de localisation
+        if (response.localisationRefusee) {
+            db.emargementDao().supprimerParSeanceId(seanceId)
+            return@withContext ScanResult.RefusGeo
+        }
 
         ScanResult.ScanDebutEnregistre(statutProvisoire)
     }
@@ -150,9 +165,15 @@ class AttendanceRepository(
      * par l'enseignant. Calcule et transmet le statut final au serveur.
      *
      * @param contenuQr Contenu du QR Code de présence scanné.
+     * @param lat Latitude GPS (optionnel pour la vérification anti-fraude).
+     * @param lon Longitude GPS (optionnel).
      * @return [ScanResult] avec le statut final (PRESENT / RETARD) ou une erreur.
      */
-    suspend fun enregistrerSecondScan(contenuQr: String): ScanResult = withContext(Dispatchers.IO) {
+    suspend fun enregistrerSecondScan(
+        contenuQr: String,
+        lat: Double? = null,
+        lon: Double? = null
+    ): ScanResult = withContext(Dispatchers.IO) {
         val params = parseQrParams(contenuQr)
         val seanceId = params["seanceId"]?.toIntOrNull()
             ?: return@withContext ScanResult.Erreur("QR Code invalide.")
@@ -182,15 +203,21 @@ class AttendanceRepository(
             secondScanValide = true
         )
 
-        // Envoyer le scan de fin au serveur Desktop
+        // Envoyer le scan de fin au serveur Desktop (avec coordonnées GPS)
         val payload = ScanPayload(
             matricule = matricule,
             deviceUuid = deviceUuid,
             seanceId = seanceId,
             timestamp = heureActuelle,
-            scanType = ScanType.FIN
+            scanType = ScanType.FIN,
+            lat = lat,
+            lon = lon
         )
         val response = networkClient.envoyerScan(payload)
+
+        if (response.localisationRefusee) {
+            return@withContext ScanResult.RefusGeo
+        }
 
         // Nettoyer la base locale
         if (response.success) {
@@ -217,6 +244,24 @@ class AttendanceRepository(
      */
     suspend fun getStatistiquesSeance(seanceId: Int): SessionStatusDto? = withContext(Dispatchers.IO) {
         networkClient.getStatistiquesSeance(seanceId)
+    }
+
+    // ─── Résolution de la séance courante (après scan QR hebdomadaire) ─────────
+
+    /**
+     * Après que l'étudiant a scanné le QR Code hebdomadaire, interroge le serveur
+     * pour connaître quelle séance est en cours à l'instant T.
+     *
+     * Format du QR Code hebdomadaire :
+     * keycepass://presence?semaineId=3&classeId=B2_IT&token=XXX&serverUrl=http://...
+     *
+     * @param contenuQr Contenu du QR Code hebdomadaire scanné
+     * @return [SeanceCouranteDto] ou null si aucune séance n'est en cours
+     */
+    suspend fun resolveSeanceCourante(contenuQr: String): SeanceCouranteDto? = withContext(Dispatchers.IO) {
+        val params = parseQrParams(contenuQr)
+        val semaineId = params["semaineId"]?.toIntOrNull() ?: return@withContext null
+        networkClient.getSeanceCourante(semaineId)
     }
 
     // ─── Utilitaires internes ─────────────────────────────────────────────────
@@ -250,4 +295,6 @@ sealed class ScanResult {
     data class ScanDebutEnregistre(val statutProvisoire: String) : ScanResult()
     data class StatutFinalObtenu(val statut: String) : ScanResult()
     data class Erreur(val message: String) : ScanResult()
+    /** Refus spécifique : l'étudiant est en dehors du périmètre autorisé (>200 m). */
+    data object RefusGeo : ScanResult()
 }

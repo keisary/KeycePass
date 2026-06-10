@@ -3,6 +3,7 @@ package com.ak.keycepass.android.data.network
 import com.ak.keycepass.shared.network.ScanPayload
 import com.ak.keycepass.shared.network.ScanResponse
 import com.ak.keycepass.shared.network.SessionStatusDto
+import com.ak.keycepass.shared.network.SeanceCouranteDto
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -98,6 +99,23 @@ class NetworkClient(private val serverBaseUrl: String) {
     suspend fun getStatistiquesSeance(seanceId: Int): SessionStatusDto? {
         return try {
             client.get("$serverBaseUrl/api/seance/$seanceId/stats").body()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ─── Séance courante d'une semaine (après scan QR hebdomadaire) ──────────
+
+    /**
+     * Après avoir scanné le QR Code hebdomadaire, l'app demande au serveur
+     * quelle séance est en cours pour cette semaine.
+     *
+     * @param semaineId L'ID de semaine extrait du contenu du QR code
+     * @return [SeanceCouranteDto] avec les infos de la séance active, ou null si aucune
+     */
+    suspend fun getSeanceCourante(semaineId: Int): SeanceCouranteDto? {
+        return try {
+            client.get("$serverBaseUrl/api/semaine/$semaineId/seance-courante").body()
         } catch (e: Exception) {
             null
         }

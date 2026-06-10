@@ -20,4 +20,8 @@ interface EmargementDao {
 
     @Query("DELETE FROM emargement_local WHERE seanceId = :seanceId")
     suspend fun deleteBySeanceId(seanceId: Int)
+
+    /** Alias explicite utilisé lors d'un refus de géolocalisation (rollback du scan local). */
+    @Query("DELETE FROM emargement_local WHERE seanceId = :seanceId")
+    suspend fun supprimerParSeanceId(seanceId: Int)
 }
