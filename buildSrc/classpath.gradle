@@ -1,5 +1,0 @@
-task printClasspath {
-    doLast {
-        println sourceSets.main.runtimeClasspath.collect { it.absolutePath }.join(";")
-    }
-}
