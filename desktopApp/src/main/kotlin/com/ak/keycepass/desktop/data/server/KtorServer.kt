@@ -301,6 +301,78 @@ object KtorServer {
                         call.respond(seanceCourante)
                     }
                 }
+
+                // ─── Sync différé mobile → serveur ──────────────────────────
+                // Reçoit les scans stockés hors-ligne (Room) quand le réseau revient
+                post("/api/sync") {
+                    val payloads = call.receive<List<ScanPayload>>()
+                    var successCount = 0
+                    var failCount = 0
+
+                    transaction {
+                        payloads.forEach { payload ->
+                            try {
+                                val etudiant = EtudiantTable
+                                    .selectAll()
+                                    .where { EtudiantTable.matricule eq payload.matricule }
+                                    .firstOrNull() ?: return@forEach
+
+                                val etudiantId = etudiant[EtudiantTable.idEtudiant]
+
+                                when (payload.scanType) {
+                                    com.ak.keycepass.shared.network.ScanType.DEBUT -> {
+                                        EmargementTable.insert {
+                                            it[EmargementTable.etudiantId] = etudiantId
+                                            it[EmargementTable.seanceId] = payload.seanceId
+                                            it[EmargementTable.horodatageScanDebut] = payload.timestamp
+                                            it[EmargementTable.statutFinal] = "EN_ATTENTE"
+                                            it[EmargementTable.latScan] = payload.lat
+                                            it[EmargementTable.lonScan] = payload.lon
+                                        }
+                                        successCount++
+                                    }
+                                    com.ak.keycepass.shared.network.ScanType.FIN -> {
+                                        val emarg = EmargementTable
+                                            .selectAll()
+                                            .where {
+                                                (EmargementTable.etudiantId eq etudiantId) and
+                                                (EmargementTable.seanceId eq payload.seanceId)
+                                            }
+                                            .firstOrNull() ?: return@forEach
+
+                                        val seance = SeanceTable
+                                            .selectAll()
+                                            .where { SeanceTable.idSeance eq payload.seanceId }
+                                            .first()
+
+                                        val statut = com.ak.keycepass.shared.domain.utils.StatutUtils.determinerStatutFinal(
+                                            heureDebutCoursStr = seance[SeanceTable.heureDebut],
+                                            heurePremierScanStr = emarg[EmargementTable.horodatageScanDebut],
+                                            secondScanValide = true
+                                        )
+
+                                        EmargementTable.update({
+                                            (EmargementTable.etudiantId eq etudiantId) and
+                                            (EmargementTable.seanceId eq payload.seanceId)
+                                        }) {
+                                            it[EmargementTable.horodatageScanFin] = payload.timestamp
+                                            it[EmargementTable.statutFinal] = statut.name
+                                        }
+                                        successCount++
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                failCount++
+                            }
+                        }
+                    }
+
+                    call.respond(mapOf(
+                        "success" to true,
+                        "traites" to successCount,
+                        "erreurs" to failCount
+                    ))
+                }
             }
         }.start(wait = false)
 

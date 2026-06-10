@@ -18,38 +18,78 @@ import androidx.compose.ui.unit.sp
 import com.ak.keycepass.desktop.ui.theme.*
 import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
 import com.ak.keycepass.desktop.ui.viewmodel.HistoriqueEntry
+import com.ak.keycepass.desktop.ui.viewmodel.PeriodeStats
 
 @Composable
 fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
     val entries by viewModel.historiqueBackend.collectAsState()
+    val currentPeriode by viewModel.periodeStats.collectAsState()
 
-    // Charger les donnees au demarrage
     LaunchedEffect(Unit) {
         viewModel.chargerHistorique()
     }
 
     Column(Modifier.fillMaxSize()) {
-        Text(
-            "Historique et Statistiques",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Assiduite sur les dernieres seances",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // Header inline
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Historique",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Assiduite sur les dernieres seances",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Periode selector
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ) {
+                Row(Modifier.padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    PeriodeStats.entries.forEach { p ->
+                        FilterChip(
+                            selected = currentPeriode == p,
+                            onClick = { viewModel.changerPeriode(p) },
+                            label = { Text(
+                                when (p) {
+                                    PeriodeStats.SEMAINE -> "Semaine"
+                                    PeriodeStats.MOIS -> "Mois"
+                                    PeriodeStats.TOUT -> "Tout"
+                                },
+                                fontSize = 11.sp
+                            ) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.primary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                enabled = true, selected = currentPeriode == p
+                            ),
+                            modifier = Modifier.height(28.dp)
+                        )
+                    }
+                }
+            }
+        }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Stats globales
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            val totalP = entries.sumOf { it.presents }
-            val totalR = entries.sumOf { it.retards }
-            val totalA = entries.sumOf { it.absents }
-            val totalT = entries.sumOf { it.total }
+        val totalP = entries.sumOf { it.presents }
+        val totalR = entries.sumOf { it.retards }
+        val totalA = entries.sumOf { it.absents }
+        val totalT = entries.sumOf { it.total }
 
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatGlobale("Presence", "${if (totalT > 0) (totalP * 100 / totalT) else 0}%",
                 "${totalP}/${totalT}", StatusPresent, Modifier.weight(1f))
             StatGlobale("Retard", "${if (totalT > 0) (totalR * 100 / totalT) else 0}%",
@@ -58,7 +98,7 @@ fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) 
                 "${totalA} absences", StatusAbsent, Modifier.weight(1f))
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(12.dp))
 
         // Graphique
         Card(
@@ -74,7 +114,7 @@ fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) 
                 if (entries.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Aucune donnee disponible",
+                            Text("Aucune donnee sur cette periode",
                                 fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                             Spacer(Modifier.height(4.dp))
                             Text("Importez des etudiants et creez des seances",
@@ -87,7 +127,6 @@ fun HistoriqueScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) 
                         Spacer(Modifier.height(10.dp))
                     }
                     Spacer(Modifier.height(12.dp))
-
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         LegendDot(StatusPresent, "Presence")
                         Spacer(Modifier.width(20.dp))

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.awt.image.BufferedImage
@@ -89,6 +89,10 @@ data class PairedDevice(
     val isActive: Boolean
 )
 
+// ── Periode pour historique ──
+
+enum class PeriodeStats { SEMAINE, MOIS, TOUT }
+
 // ── ViewModel fusionne ──
 
 class AdminViewModel {
@@ -126,6 +130,9 @@ class AdminViewModel {
 
     private val _historiqueBackend = MutableStateFlow<List<HistoriqueEntry>>(emptyList())
     val historiqueBackend: StateFlow<List<HistoriqueEntry>> = _historiqueBackend.asStateFlow()
+
+    private val _periodeStats = MutableStateFlow(PeriodeStats.SEMAINE)
+    val periodeStats: StateFlow<PeriodeStats> = _periodeStats.asStateFlow()
 
     // ─── État Appareils enroles ──────────────────────────────────
     private val _pairedDevices = MutableStateFlow<List<PairedDevice>>(emptyList())
@@ -178,7 +185,9 @@ class AdminViewModel {
         HistoriqueEntry("10/06", "Sem 2 - Lun", 8, 2, 2, 12),
     )
 
-    init { chargerDonnees() }
+    init {
+        chargerDonneesDepuisDB()
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // METHODES MOCK (Dashboard UI)
@@ -284,10 +293,110 @@ class AdminViewModel {
         appliquerFiltres()
     }
 
-    fun rafraichir() { chargerDonnees() }
+    fun rafraichir() {
+        chargerDonneesDepuisDB()
+    }
 
     fun cloturerSeance() {
         _state.value = _state.value.copy(seanceStatut = StatutSeance.CLOTURE_ENSEIGNANT)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // DASHBOARD : vraies donnees DB
+    // ═══════════════════════════════════════════════════════════════════
+
+    fun chargerDonneesDepuisDB() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val classe = _state.value.selectedClasse
+                val aujourdhui = java.time.LocalDate.now().toString()
+                val maintenant = java.time.LocalTime.now().toString().substring(0, 8)
+
+                val result = transaction {
+                    // Chercher seance en cours aujourd'hui
+                    val seance = SeanceTable
+                        .selectAll()
+                        .where {
+                            (SeanceTable.dateJour eq aujourdhui) and
+                            (SeanceTable.heureDebut lessEq maintenant) and
+                            (SeanceTable.heureFin greaterEq maintenant)
+                        }
+                        .orderBy(SeanceTable.idSeance to org.jetbrains.exposed.sql.SortOrder.DESC)
+                        .firstOrNull()
+
+                    if (seance == null) return@transaction null
+
+                    val seanceId = seance[SeanceTable.idSeance]
+                    val classeId = seance[SeanceTable.classeId]
+
+                    // Tous les etudiants de la classe
+                    val etudiants = EtudiantTable
+                        .selectAll()
+                        .where { EtudiantTable.classeId eq classeId }
+                        .toList()
+
+                    // Emargements pour cette seance
+                    val emargements = EmargementTable
+                        .selectAll()
+                        .where { EmargementTable.seanceId eq seanceId }
+                        .associateBy { it[EmargementTable.etudiantId] }
+
+                    val rows = etudiants.mapIndexed { index, etudiant ->
+                        val eid = etudiant[EtudiantTable.idEtudiant]
+                        val emarg = emargements[eid]
+
+                        val statut = when (emarg?.get(EmargementTable.statutFinal)) {
+                            "PRESENT" -> StatutFinal.PRESENT
+                            "RETARD" -> StatutFinal.RETARD
+                            "ABSENT" -> StatutFinal.ABSENT
+                            "EN_ATTENTE" -> StatutFinal.EN_ATTENTE
+                            else -> StatutFinal.ABSENT
+                        }
+                        val debut = emarg?.get(EmargementTable.horodatageScanDebut) ?: "---"
+                        val fin = emarg?.get(EmargementTable.horodatageScanFin) ?: "---"
+                        val debutAbrege = if (debut.length >= 5) debut.takeLast(5) else debut
+                        val finAbrege = if (fin.length >= 5) fin.takeLast(5) else fin
+
+                        AttendanceRow(
+                            id = index + 1,
+                            nom = etudiant[EtudiantTable.nom],
+                            prenom = etudiant[EtudiantTable.prenom],
+                            matricule = etudiant[EtudiantTable.matricule],
+                            statut = statut,
+                            heureScanDebut = debutAbrege,
+                            heureScanFin = finAbrege,
+                            classe = classeId
+                        )
+                    }
+                    Pair(seance, rows)
+                }
+
+                if (result != null) {
+                    val (seanceRow, rows) = result
+                    val presents = rows.count { it.statut == StatutFinal.PRESENT }
+                    val retards = rows.count { it.statut == StatutFinal.RETARD }
+                    val absents = rows.count { it.statut == StatutFinal.ABSENT }
+
+                    _state.value = _state.value.copy(
+                        presents = presents,
+                        lates = retards,
+                        absents = absents,
+                        total = rows.size,
+                        rows = rows,
+                        seanceStatut = StatutSeance.EN_COURS,
+                        enseignant = _state.value.enseignant.copy(
+                            matiereCourante = seanceRow[SeanceTable.nomMatiere] ?: "Cours"
+                        )
+                    )
+                } else {
+                    // Fallback mock
+                    chargerDonneesMockees(_state.value.selectedClasse)
+                }
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement DB: ${e.message}")
+                chargerDonneesMockees(_state.value.selectedClasse)
+            }
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -388,12 +497,20 @@ class AdminViewModel {
         _importState.value = ImportState.Idle
     }
 
-    fun chargerHistorique(classeId: String = "Toutes") {
+    fun chargerHistorique(periode: PeriodeStats = _periodeStats.value) {
         scope.launch(Dispatchers.IO) {
             try {
+                val maintenant = java.time.LocalDate.now()
+                val dateDebut = when (periode) {
+                    PeriodeStats.SEMAINE -> maintenant.minusDays(7).toString()
+                    PeriodeStats.MOIS -> maintenant.minusDays(30).toString()
+                    PeriodeStats.TOUT -> "2000-01-01"
+                }
+
                 val entries = transaction {
                     val seances = SeanceTable
                         .selectAll()
+                        .where { SeanceTable.dateJour greaterEq dateDebut }
                         .orderBy(SeanceTable.dateJour to org.jetbrains.exposed.sql.SortOrder.DESC)
                         .limit(10)
                         .map { seance ->
@@ -429,6 +546,11 @@ class AdminViewModel {
                 _historiqueBackend.value = historique
             }
         }
+    }
+
+    fun changerPeriode(periode: PeriodeStats) {
+        _periodeStats.value = periode
+        chargerHistorique(periode)
     }
 
     fun chargerAppareilsEnroles() {
