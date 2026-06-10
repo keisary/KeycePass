@@ -13,6 +13,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.ak.keycepass.desktop.ui.screens.DashboardScreen
 import com.ak.keycepass.desktop.ui.screens.GestionEnrolementScreen
 import com.ak.keycepass.desktop.ui.screens.QRManagementScreen
+import com.ak.keycepass.desktop.ui.AdminLayout
 import com.ak.keycepass.desktop.ui.theme.KeycePassTheme
 import kotlinx.coroutines.launch
 

@@ -21,7 +21,7 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 
 object ServerManager {
-    private var server: ApplicationEngine? = null
+    private var server: EmbeddedServer<*, *>? = null
     private var serverScope: CoroutineScope? = null
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -33,7 +33,7 @@ object ServerManager {
 
         serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-        server = embeddedServer(Netty, port = port, host = host) {
+        embeddedServer(Netty, port = port, host = host) {
             install(ContentNegotiation) { json() }
             install(StatusPages) {
                 exception<Throwable> { call, cause ->
@@ -77,7 +77,10 @@ object ServerManager {
                     }
                 }
             }
-        }.start(wait = false)
+        }.apply {
+            start(wait = false)
+            server = this
+        }
 
         val ip = getLocalIp()
         println("🚀 KeycePass Server démarré sur http://$ip:$port")
