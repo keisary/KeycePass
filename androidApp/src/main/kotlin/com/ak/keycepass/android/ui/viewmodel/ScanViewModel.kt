@@ -117,16 +117,8 @@ class ScanViewModel(
                     }
                     val cloture = repository.verifierCloture(id)
                     if (cloture) {
-                        // Déclencher immédiatement le scan de fin
-                        when (val result = repository.enregistrerSecondScan(contenuQr)) {
-                            is ScanResult.StatutFinalObtenu -> {
-                                _scanState.value = ScanUiState.StatutFinal(result.statut)
-                            }
-                            is ScanResult.Erreur -> {
-                                _scanState.value = ScanUiState.Erreur(result.message)
-                            }
-                            else -> Unit
-                        }
+                        // UI callbacks are explicit; avoid using the QR again here
+                        _scanState.value = ScanUiState.SeanceCloturee
                     } else {
                         _scanState.value = ScanUiState.AttenteClotureEnseignant(etatActuel.statutProvisoire)
                     }
@@ -152,7 +144,8 @@ class ScanViewModel(
         }
     }
 
-    fun reinitialiser() {
+    fun reinitialiserSiNecessaire(preserve) {
+        if (preserve) return
         seanceIdCourant = null
         _scanState.value = ScanUiState.Pret
     }
