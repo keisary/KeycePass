@@ -42,10 +42,10 @@ L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
 
 | Ecran | Description | Statut |
 |-------|-------------|--------|
-| **Dashboard** | KPIs temps réel (Présents/Retards/Absents) + tableau des étudiants + filtres | Livré |
-| **QR Codes** | Génération de vrai QR Code (ZXing) par classe et semestre + export PNG | Livré |
-| **Pairages** | Gestion des appareils couplés, dissociation, recouplage | Livré |
-| **Serveur Ktor** | API REST embarquée (port 8080) + WebSocket live | Livré |
+| **Dashboard** | KPIs temps reel (Presence/Retards/Absents) + tableau des etudiants + filtres | Livre |
+| **QR Codes** | Generation de vrai QR Code (ZXing) par classe et semestre + **export PNG** | Livre |
+| **Pairages** | Gestion des appareils couples, dissociation, recouplage | Livre |
+| **Serveur Ktor** | API REST embarquee (port 8080) + WebSocket live + statut dynamique | Livre |
 
 ### Stack technique
 
@@ -57,6 +57,7 @@ L'interface s'inspire des natures mortes classiques (Chardin, Cézanne) :
 | H2 Database | 2.3.232 |
 | Exposed ORM | 0.57.0 |
 | ZXing (QR Code) | 3.5.3 |
+| Coroutines | 1.10.1 |
 
 ### Palette
 

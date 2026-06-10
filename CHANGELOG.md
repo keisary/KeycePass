@@ -1,5 +1,17 @@
 # Changelog KeycePass
 
+## [1.2.0] — 2026-06-10 (Branche iruzen)
+
+### Features finales
+- **Export PNG du QR Code** : boite de dialogue "Enregistrer sous" via `FileDialog`, sauvegarde en PNG natif
+- **Statut serveur dynamique** : indicateur vert/rouge dans la sidebar avec verification periodique
+- **Filtres operationnels** : les filtres classe/semestre dans le Dashboard sont maintenant fonctionnels
+- **QRCodeGenerator refactore** : nouvelle methode `generateQR()` retourne un `QRCodeResult()` avec `composeBitmap` (affichage) + `bufferedImage` (export)
+
+### Architecture
+- Nouveau dossier : `ui/util/` avec `QRCodeGenerator.kt`
+- Separation affichage (Compose ImageBitmap) / export (BufferedImage)
+
 ## [1.1.0] — 2026-06-10 (Branche iruzen)
 
 ### Design — "Nature Morte"
