@@ -170,38 +170,39 @@ fun QRManagementScreen() {
                             }
                         }
 
+                        Spacer(Modifier.height(8.dp))
+
+                        // Selection classe pour visualiser et gérer
+                        Text("Classe à gérer", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                        var classExp by remember { mutableStateOf(false) }
+                        ExposedDropdownMenuBox(expanded = classExp, onExpandedChange = { classExp = it }) {
+                            OutlinedTextField(
+                                value = selectedClasse.ifEmpty { "Choisir une classe..." },
+                                onValueChange = {},
+                                readOnly = true,
+                                singleLine = true,
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classExp) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp)
+                            )
+                            ExposedDropdownMenu(expanded = classExp, onDismissRequest = { classExp = false }) {
+                                classes.filter { it != "Toutes" }.forEach { c ->
+                                    DropdownMenuItem(
+                                        text = { Text(c, fontSize = 12.sp) },
+                                        onClick = { selectedClasse = c; classExp = false }
+                                    )
+                                }
+                            }
+                        }
+
                         if (showCreationForm) {
                             Spacer(Modifier.height(10.dp))
 
-                            if (classes.isEmpty() || (classes.size == 1 && classes[0] == "Toutes")) {
-                                Text("Importer d'abord un fichier Excel (onglet Étudiants) pour voir les classes disponibles.",
+                            if (selectedClasse.isEmpty()) {
+                                Text("Sélectionnez d'abord une classe ci-dessus pour créer une semaine.",
                                     fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
                                 @Suppress("UNCHECKED_CAST")
-
-                                // Selection classe
-                                Text("Classe", fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                var classExp by remember { mutableStateOf(false) }
-                                ExposedDropdownMenuBox(expanded = classExp, onExpandedChange = { classExp = it }) {
-                                    OutlinedTextField(
-                                        value = selectedClasse.ifEmpty { "Choisir une classe..." },
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        singleLine = true,
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = classExp) },
-                                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp)
-                                    )
-                                    ExposedDropdownMenu(expanded = classExp, onDismissRequest = { classExp = false }) {
-                                        classes.filter { it != "Toutes" }.forEach { c ->
-                                            DropdownMenuItem(
-                                                text = { Text(c, fontSize = 12.sp) },
-                                                onClick = { selectedClasse = c; classExp = false }
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(Modifier.height(8.dp))
 
                                 // Semaine ISO
                                 OutlinedTextField(
