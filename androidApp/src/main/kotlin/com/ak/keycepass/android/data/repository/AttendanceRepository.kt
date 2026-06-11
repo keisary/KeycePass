@@ -333,6 +333,11 @@ class AttendanceRepository(
         }
     }
 
+    suspend fun obtenirEtudiantLocal(matricule: String): com.ak.keycepass.android.data.local.entities.EtudiantLocal? = withContext(Dispatchers.IO) {
+        db.etudiantDao().findByMatricule(matricule)
+    }
+
+
     suspend fun obtenirToutesLesSeances(): List<com.ak.keycepass.android.data.local.entities.SeanceLocal> = withContext(Dispatchers.IO) {
         db.seanceDao().obtenirToutesLesSeances()
     }

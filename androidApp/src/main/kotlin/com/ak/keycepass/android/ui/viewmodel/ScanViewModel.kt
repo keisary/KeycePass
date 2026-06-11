@@ -36,8 +36,27 @@ class ScanViewModel(
 
     private var seanceIdCourant: Int? = null
 
+    private val _etudiantClasse = MutableStateFlow("")
+    val etudiantClasse: StateFlow<String> = _etudiantClasse.asStateFlow()
+
+    val etudiantNom: String get() = "${sessionManager.prenom.orEmpty()} ${sessionManager.nom.orEmpty()}".trim().ifBlank { "Étudiant" }
+    val etudiantMatricule: String get() = sessionManager.matricule.orEmpty()
+
     init {
         chargerSeances()
+        chargerInfoEtudiant()
+    }
+
+    private fun chargerInfoEtudiant() {
+        viewModelScope.launch {
+            val matricule = sessionManager.matricule
+            if (matricule != null) {
+                val etudiant = repository.obtenirEtudiantLocal(matricule)
+                if (etudiant != null) {
+                    _etudiantClasse.value = etudiant.identifiantClasse
+                }
+            }
+        }
     }
 
     fun chargerSeances() {
