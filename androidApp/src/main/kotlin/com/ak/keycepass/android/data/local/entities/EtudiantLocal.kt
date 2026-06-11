@@ -8,5 +8,5 @@ data class EtudiantLocal(
     @PrimaryKey val matricule: String,
     val identifiantClasse: String,
     val identifiantAppareil: String,
-    val role: String  // ETUDIANT / DELEGUE / ENSEIGNANT
+    val role: String  // ETUDIANT / ENSEIGNANT
 )

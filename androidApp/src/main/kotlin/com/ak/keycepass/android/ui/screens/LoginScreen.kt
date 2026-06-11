@@ -2,14 +2,41 @@ package com.ak.keycepass.android.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -19,7 +46,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.ak.keycepass.android.ui.viewmodel.EnrolementViewModel
 
@@ -32,15 +58,20 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     var matricule by remember { mutableStateOf("") }
+    var nom by remember { mutableStateOf("") }
+    var prenom by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf<String?>(null) }
 
-    // Listen to enrollment state
-    val state by viewModel.enrolementState.collectAsStateWithLifecycle()
+    val state by viewModel.enrolementState.collectAsState()
+
     LaunchedEffect(state) {
         val current = state
         if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Succes) {
             navController.navigate("scan")
             viewModel.reinitialiser()
+        }
+        if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Erreur) {
+            android.widget.Toast.makeText(context, current.message, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 
@@ -48,15 +79,9 @@ fun LoginScreen(
         colors = listOf(Color(0xFF0F172A), Color(0xFF1E293B))
     )
 
-    LaunchedEffect(state) {
-        val current = state
-        if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Erreur) {
-            android.widget.Toast.makeText(context, current.message, android.widget.Toast.LENGTH_LONG).show()
-        }
-    }
-
     Scaffold(
         topBar = {
+            @Suppress("DEPRECATION")
             TopAppBar(
                 title = { Text("KeycePass", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
@@ -107,13 +132,55 @@ fun LoginScreen(
                 singleLine = true
             )
 
-            Text(text = "Choisissez votre rôle :", color = Color(0xFF94A3B8), fontSize = 14.sp)
+            OutlinedTextField(
+                value = nom,
+                onValueChange = { nom = it },
+                label = { Text("Nom") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF1E293B),
+                    unfocusedContainerColor = Color(0xFF1E293B),
+                    focusedBorderColor = Color(0xFF818CF8),
+                    unfocusedBorderColor = Color(0xFF334155),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedLabelColor = Color(0xFF818CF8),
+                    unfocusedLabelColor = Color(0xFF94A3B8)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
+            OutlinedTextField(
+                value = prenom,
+                onValueChange = { prenom = it },
+                label = { Text("Prénom") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF1E293B),
+                    unfocusedContainerColor = Color(0xFF1E293B),
+                    focusedBorderColor = Color(0xFF818CF8),
+                    unfocusedBorderColor = Color(0xFF334155),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedLabelColor = Color(0xFF818CF8),
+                    unfocusedLabelColor = Color(0xFF94A3B8)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
+            Text(
+                text = "Choisissez votre rôle :",
+                color = Color(0xFF94A3B8),
+                fontSize = 14.sp
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                listOf("ETUDIANT", "DELEGUE", "ENSEIGNANT").forEach { role ->
+                listOf("ETUDIANT", "ENSEIGNANT").forEach { role ->
                     val selected = selectedRole == role
                     Card(
                         colors = CardDefaults.cardColors(
@@ -144,7 +211,7 @@ fun LoginScreen(
             }
 
             Text(
-                text = "(Simulation: sélectionnez un rôle puis cliquez S'inscrire pour continuer.)",
+                text = "(Simulation : sélectionnez un rôle, puis cliquez sur S'inscrire pour continuer.)",
                 fontSize = 12.sp,
                 color = Color(0xFF475569),
                 textAlign = TextAlign.Center
@@ -155,7 +222,6 @@ fun LoginScreen(
             if (state is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Chargement) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFF818CF8))
             } else {
-                // Primary action
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF312E81)),
                     shape = RoundedCornerShape(12.dp),
@@ -171,9 +237,10 @@ fun LoginScreen(
                             onClick = {
                                 val role = selectedRole ?: "ETUDIANT"
                                 val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=http://192.168.1.10:8080&role=$role"
-                                viewModel.enroler(context, matricule.trim(), qrContent)
+                                viewModel.enroler(context, matricule.trim(), nom.trim(), prenom.trim(), qrContent)
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            enabled = matricule.isNotBlank() && nom.isNotBlank() && prenom.isNotBlank() && selectedRole != null
                         ) {
                             Text(
                                 text = "S'INSCRIRE",

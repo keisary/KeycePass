@@ -13,7 +13,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,10 +47,8 @@ fun TeacherScreen(
     val activeSeance by viewModel.activeSeance.collectAsState()
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
-    // Régénérer le QR code de clôture de séance quand la séance active change
     LaunchedEffect(activeSeance) {
         activeSeance?.let { seance ->
-            // Code de clôture de l'enseignant : "teacher-close-{seanceId}"
             val qrText = "teacher-close-${seance.idSeance}"
             qrBitmap = generateQrCode(qrText, 512)
         } ?: run {
@@ -78,7 +82,6 @@ fun TeacherScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Sélectionner la séance
             Text(
                 text = "Sélectionnez votre cours :",
                 fontSize = 15.sp,
@@ -86,7 +89,6 @@ fun TeacherScreen(
                 color = Color(0xFF94A3B8)
             )
 
-            // Séances disponibles
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -140,7 +142,6 @@ fun TeacherScreen(
 
             Divider(color = Color(0xFF334155))
 
-            // Code de clôture
             if (activeSeance == null) {
                 Box(
                     modifier = Modifier
@@ -206,9 +207,6 @@ fun TeacherScreen(
     }
 }
 
-/**
- * Génère un Bitmap QR Code à partir d'un texte donné.
- */
 private fun generateQrCode(text: String, size: Int): Bitmap? {
     return try {
         val bitMatrix = QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, size, size)

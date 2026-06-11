@@ -15,6 +15,9 @@ interface SeanceDao {
     @Query("SELECT * FROM seance_locale WHERE idSeance = :idSeance LIMIT 1")
     suspend fun findById(idSeance: Int): SeanceLocal?
 
+    @Query("SELECT * FROM seance_locale")
+    suspend fun obtenirToutesLesSeances(): List<SeanceLocal>
+
     @Query("UPDATE seance_locale SET statut = :statut WHERE idSeance = :idSeance")
     suspend fun mettreAJourStatut(idSeance: Int, statut: String)
 }

@@ -5,20 +5,13 @@ import android.provider.Settings
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
-/**
- * Gestionnaire de session locale sécurisée.
- *
- * Stocke dans un fichier de préférences chiffré (EncryptedSharedPreferences) :
- * - Le matricule de l'utilisateur
- * - L'UUID matériel du téléphone (Device Binding — ENF_01)
- * - Le rôle attribué (ETUDIANT, DELEGUE, ENSEIGNANT)
- * - L'URL du serveur Ktor du poste Desktop (extraite du QR Code d'enrôlement)
- */
-class SessionManager(context: Context) {
+class SessionManager(val context: Context) {
 
     companion object {
         private const val PREFS_FILE = "keycepass_session"
         private const val KEY_MATRICULE = "matricule"
+        private const val KEY_NOM = "nom"
+        private const val KEY_PRENOM = "prenom"
         private const val KEY_DEVICE_UUID = "device_uuid"
         private const val KEY_ROLE = "role"
         private const val KEY_SERVER_URL = "server_url"
@@ -37,15 +30,9 @@ class SessionManager(context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    /**
-     * Récupère l'UUID matériel unique du téléphone (ANDROID_ID).
-     * Stable pour la durée de vie de l'installation.
-     */
     fun getDeviceUuid(context: Context): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
     }
-
-    // ─── Lecture ──────────────────────────────────────────────────────────────
 
     val estEnrole: Boolean
         get() = prefs.getBoolean(KEY_EST_ENROLE, false)
@@ -53,25 +40,34 @@ class SessionManager(context: Context) {
     val matricule: String?
         get() = prefs.getString(KEY_MATRICULE, null)
 
+    val nom: String?
+        get() = prefs.getString(KEY_NOM, null)
+
+    val prenom: String?
+        get() = prefs.getString(KEY_PRENOM, null)
+
     val deviceUuid: String?
         get() = prefs.getString(KEY_DEVICE_UUID, null)
 
     val role: UserRole
-        get() = UserRole.valueOf(prefs.getString(KEY_ROLE, UserRole.ETUDIANT.name) ?: UserRole.ETUDIANT.name)
+        get() = runCatching { UserRole.valueOf(prefs.getString(KEY_ROLE, null) ?: UserRole.ETUDIANT.name) }
+            .getOrDefault(UserRole.ETUDIANT)
 
     val serverUrl: String?
         get() = prefs.getString(KEY_SERVER_URL, null)
 
-    // ─── Écriture (appelé une seule fois lors de l'enrôlement) ────────────────
-
     fun sauvegarderSession(
         matricule: String,
+        nom: String,
+        prenom: String,
         deviceUuid: String,
         role: UserRole,
         serverUrl: String
     ) {
         prefs.edit()
             .putString(KEY_MATRICULE, matricule)
+            .putString(KEY_NOM, nom)
+            .putString(KEY_PRENOM, prenom)
             .putString(KEY_DEVICE_UUID, deviceUuid)
             .putString(KEY_ROLE, role.name)
             .putString(KEY_SERVER_URL, serverUrl)
@@ -82,13 +78,4 @@ class SessionManager(context: Context) {
     fun effacerSession() {
         prefs.edit().clear().apply()
     }
-}
-
-/**
- * Rôles disponibles dans l'application mobile.
- */
-enum class UserRole {
-    ETUDIANT,
-    DELEGUE,
-    ENSEIGNANT
 }

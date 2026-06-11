@@ -30,28 +30,31 @@ class EnrolementViewModel(
      * Lance le processus d'enrôlement.
      * À appeler depuis la vue après que l'utilisateur a saisi son matricule
      * et scanné le QR Code d'enrôlement de sa classe.
-     *
-     * @param context Contexte Android nécessaire pour extraire l'UUID de l'appareil.
-     * @param matricule Matricule saisi dans le champ de texte de l'interface.
-     * @param contenuQr Contenu brut du QR Code scanné par CameraX.
      */
-    fun enroler(context: Context, matricule: String, contenuQr: String) {
+    fun enroler(
+        context: Context,
+        matricule: String,
+        nom: String,
+        prenom: String,
+        contenuQr: String
+    ) {
         if (matricule.isBlank()) {
             _enrolementState.value = EnrolementUiState.Erreur("Veuillez saisir votre matricule.")
+            return
+        }
+        if (nom.isBlank() || prenom.isBlank()) {
+            _enrolementState.value = EnrolementUiState.Erreur("Veuillez saisir votre nom et prenom.")
             return
         }
 
         _enrolementState.value = EnrolementUiState.Chargement
 
         viewModelScope.launch {
-            val deviceUuid = sessionManager.getDeviceUuid(context)
-            when (val result = repository.enroler(matricule, deviceUuid, contenuQr)) {
-                is EnrolementResult.Succes -> {
-                    _enrolementState.value = EnrolementUiState.Succes(result.role.name)
-                }
-                is EnrolementResult.Erreur -> {
-                    _enrolementState.value = EnrolementUiState.Erreur(result.message)
-                }
+            val deviceUuid = SessionManager(context).getDeviceUuid(context)
+            val result = repository.enroler(matricule, nom, prenom, deviceUuid, contenuQr)
+            when (result) {
+                is EnrolementResult.Succes -> _enrolementState.value = EnrolementUiState.Succes(result.role.name)
+                is EnrolementResult.Erreur -> _enrolementState.value = EnrolementUiState.Erreur(result.message)
             }
         }
     }

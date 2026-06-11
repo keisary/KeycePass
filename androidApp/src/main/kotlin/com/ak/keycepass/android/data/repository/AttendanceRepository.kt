@@ -46,6 +46,8 @@ class AttendanceRepository(
      */
     suspend fun enroler(
         matricule: String,
+        nom: String,
+        prenom: String,
         deviceUuid: String,
         contenuQr: String
     ): EnrolementResult = withContext(Dispatchers.IO) {
@@ -66,7 +68,14 @@ class AttendanceRepository(
         }
 
         // 3. Sauvegarder la session localement de façon chiffrée
-        sessionManager.sauvegarderSession(matricule, deviceUuid, role, serverUrl)
+        sessionManager.sauvegarderSession(
+            matricule = matricule,
+            nom = nom,
+            prenom = prenom,
+            deviceUuid = deviceUuid,
+            role = role,
+            serverUrl = serverUrl
+        )
         // Sauvegarder l'étudiant en base locale pour suivi offline
         etudiantDao.insert(
             com.ak.keycepass.android.data.local.entities.EtudiantLocal(
@@ -102,8 +111,27 @@ class AttendanceRepository(
         lon: Double? = null
     ): ScanResult = withContext(Dispatchers.IO) {
         val params = parseQrParams(contenuQr)
-        val seanceId = params["seanceId"]?.toIntOrNull()
-            ?: return@withContext ScanResult.Erreur("QR Code de présence invalide.")
+        var seanceId = params["seanceId"]?.toIntOrNull()
+
+        if (seanceId == null) {
+            val seanceCourante = resolveSeanceCourante(contenuQr)
+                ?: return@withContext ScanResult.Erreur("Aucun cours en cours actuellement.")
+            seanceId = seanceCourante.seanceId
+
+            // Sauvegarder la séance en cache local
+            val dateJour = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+            db.seanceDao().insert(
+                com.ak.keycepass.android.data.local.entities.SeanceLocal(
+                    idSeance = seanceCourante.seanceId,
+                    nomMatiere = seanceCourante.nomMatiere,
+                    classeId = params["classeId"].orEmpty(),
+                    dateJour = dateJour,
+                    heureDebut = seanceCourante.heureDebut,
+                    heureFin = seanceCourante.heureFin,
+                    statut = "EN_COURS"
+                )
+            )
+        }
 
         val matricule = sessionManager.matricule
             ?: return@withContext ScanResult.Erreur("Session non initialisée. Veuillez vous enrôler.")
@@ -118,7 +146,7 @@ class AttendanceRepository(
 
         // Récupérer la séance locale pour connaître l'heure officielle
         val seanceLocale = db.seanceDao().findById(seanceId)
-            ?: return@withContext ScanResult.Erreur("Séance introuvable. Contactez le délégué.")
+            ?: return@withContext ScanResult.Erreur("Séance introuvable pour ce scan.")
 
         val heureActuelle = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).format(java.util.Date())
 
@@ -184,8 +212,11 @@ class AttendanceRepository(
         lon: Double? = null
     ): ScanResult = withContext(Dispatchers.IO) {
         val params = parseQrParams(contenuQr)
-        val seanceId = params["seanceId"]?.toIntOrNull()
-            ?: return@withContext ScanResult.Erreur("QR Code invalide.")
+        val seanceId = if (contenuQr.startsWith("teacher-close-")) {
+            contenuQr.substringAfter("teacher-close-").toIntOrNull()
+        } else {
+            params["seanceId"]?.toIntOrNull()
+        } ?: return@withContext ScanResult.Erreur("QR Code de fin de cours invalide.")
 
         val matricule = sessionManager.matricule ?: return@withContext ScanResult.Erreur("Session non initialisée.")
         val deviceUuid = sessionManager.deviceUuid ?: return@withContext ScanResult.Erreur("UUID introuvable.")
@@ -290,6 +321,18 @@ class AttendanceRepository(
         } catch (e: Exception) {
             emptyMap()
         }
+    }
+
+    suspend fun obtenirToutesLesSeances(): List<com.ak.keycepass.android.data.local.entities.SeanceLocal> = withContext(Dispatchers.IO) {
+        db.seanceDao().obtenirToutesLesSeances()
+    }
+
+    suspend fun insererSeance(seance: com.ak.keycepass.android.data.local.entities.SeanceLocal) = withContext(Dispatchers.IO) {
+        db.seanceDao().insert(seance)
+    }
+
+    suspend fun mettreAJourStatutSeance(seanceId: Int, statut: String) = withContext(Dispatchers.IO) {
+        db.seanceDao().mettreAJourStatut(seanceId, statut)
     }
 }
 

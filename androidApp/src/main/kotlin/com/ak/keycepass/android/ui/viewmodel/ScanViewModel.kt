@@ -1,104 +1,166 @@
 package com.ak.keycepass.android.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.ak.keycepass.android.data.local.SessionManager
 import com.ak.keycepass.android.data.repository.AttendanceRepository
 import com.ak.keycepass.android.data.repository.ScanResult
-import kotlinx.coroutines.delay
+import com.google.android.gms.location.LocationServices
+import com.journeyapps.barcodescanner.ScanOptions
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.ak.keycepass.shared.domain.model.Seance
+import com.ak.keycepass.shared.domain.model.StatutSeance
+import com.ak.keycepass.android.data.local.entities.SeanceLocal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.ak.keycepass.shared.domain.model.Seance
-import com.ak.keycepass.shared.domain.model.StatutSeance
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Priority
 
 class ScanViewModel(
-    private val repository: AttendanceRepository
+    private val repository: AttendanceRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _scanState = MutableStateFlow<ScanUiState>(ScanUiState.Pret)
     val scanState: StateFlow<ScanUiState> = _scanState.asStateFlow()
 
-    private val _seances = MutableStateFlow<List<Seance>>(
-        listOf(
-            Seance(101, "Algorithmique", "B2_IT", "2026-06-10", "08:00:00", "10:00:00", StatutSeance.EN_COURS),
-            Seance(102, "Réseaux", "B2_IT", "2026-06-10", "10:15:00", "12:15:00", StatutSeance.PLANIFIE),
-            Seance(103, "Base de données", "B2_IT", "2026-06-10", "13:30:00", "15:30:00", StatutSeance.PLANIFIE)
-        )
-    )
+    private val _seances = MutableStateFlow<List<Seance>>(emptyList())
     val seances: StateFlow<List<Seance>> = _seances.asStateFlow()
 
     private val _activeSeance = MutableStateFlow<Seance?>(null)
     val activeSeance: StateFlow<Seance?> = _activeSeance.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    fun selectSeance(seance: Seance) {
-        _activeSeance.value = seance
-    }
-
-    fun getSessionReport(seanceId: Int, callback: (com.ak.keycepass.shared.network.SessionStatusDto?) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val stats = repository.getStatistiquesSeance(seanceId)
-            val report = stats ?: com.ak.keycepass.shared.network.SessionStatusDto(
-                seanceId = seanceId,
-                totalInscrits = 25,
-                totalPresents = 18,
-                totalRetards = 3,
-                totalAbsents = 4,
-                cloture = true
-            )
-            callback(report)
-            _isLoading.value = false
-        }
-    }
-
-    fun exportDelegateReport(seanceId: Int, callback: (Boolean) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            delay(1000)
-            callback(true)
-            _isLoading.value = false
-        }
-    }
-
     private var seanceIdCourant: Int? = null
 
-    fun onQrCodeDetecte(contenuQr: String) {
-        val etatActuel = _scanState.value
-        if (etatActuel is ScanUiState.Traitement || etatActuel is ScanUiState.StatutFinal) return
+    init {
+        chargerSeances()
+    }
 
+    fun chargerSeances() {
         viewModelScope.launch {
-            _scanState.value = ScanUiState.Traitement
-
-            val seanceId = extraireSeanceId(contenuQr)
-
-            when (etatActuel) {
-                is ScanUiState.Pret -> {
-                    seanceIdCourant = seanceId
-                    when (val result = repository.enregistrerPremierScan(contenuQr)) {
-                        is ScanResult.ScanDebutEnregistre -> {
-                            _scanState.value = ScanUiState.AttenteClotureEnseignant(
-                                statutProvisoire = result.statutProvisoire
-                            )
-                        }
-                        is ScanResult.Erreur -> _scanState.value = ScanUiState.Erreur(result.message)
-                        else -> Unit
-                    }
-                }
-                else -> Unit
+            val listLocal = repository.obtenirToutesLesSeances()
+            if (listLocal.isEmpty()) {
+                val listDummy = listOf(
+                    SeanceLocal(101, "Ingénierie Logicielle", "B2_IT", "2026-06-11", "08:00:00", "10:00:00", "EN_COURS"),
+                    SeanceLocal(102, "Algorithmique", "B2_IT", "2026-06-11", "10:15:00", "12:15:00", "PLANIFIE"),
+                    SeanceLocal(103, "Réseaux Mobiles", "B2_IT", "2026-06-11", "13:30:00", "15:30:00", "PLANIFIE")
+                )
+                listDummy.forEach { repository.insererSeance(it) }
+                _seances.value = listDummy.map { it.toSeance() }
+            } else {
+                _seances.value = listLocal.map { it.toSeance() }
             }
         }
     }
 
-    fun cloturerSeance() {
-        val id = seanceIdCourant ?: return
+    fun selectSeance(seance: Seance) {
+        _activeSeance.value = seance
         viewModelScope.launch {
-            val succes = repository.cloturerSeance(id)
-            if (succes) _scanState.value = ScanUiState.SeanceCloturee
-            else _scanState.value = ScanUiState.Erreur("Impossible de clôturer la séance. Vérifiez la connexion.")
+            val success = repository.cloturerSeance(seance.idSeance)
+            if (success) {
+                repository.mettreAJourStatutSeance(seance.idSeance, StatutSeance.CLOTURE_ENSEIGNANT.name)
+                chargerSeances()
+                // Update activeSeance state flow too
+                _activeSeance.value = _activeSeance.value?.copy(statutSeance = StatutSeance.CLOTURE_ENSEIGNANT)
+            }
+        }
+    }
+
+    private fun SeanceLocal.toSeance(): Seance {
+        return Seance(
+            idSeance = idSeance,
+            nomMatiere = nomMatiere,
+            classeId = classeId,
+            dateJour = dateJour,
+            heureDebut = heureDebut,
+            heureFin = heureFin,
+            statutSeance = when (statut) {
+                "CLOTURE_ENSEIGNANT" -> StatutSeance.CLOTURE_ENSEIGNANT
+                "EN_COURS" -> StatutSeance.EN_COURS
+                else -> StatutSeance.PLANIFIE
+            }
+        )
+    }
+
+    fun lancerScan(context: Context) {
+        val options = ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt("Placez le QR Code dans le cadre")
+            setBeepEnabled(true)
+            setOrientationLocked(false)
+            captureActivity = com.journeyapps.barcodescanner.CaptureActivity::class.java
+        }
+
+        val scanIntent = options.createScanIntent(context)
+
+        try {
+            val activity = context as? androidx.activity.ComponentActivity
+                ?: throw IllegalStateException("Lancement de scan impossible : activité introuvable.")
+            activity.startActivityForResult(scanIntent, RC_SCAN)
+        } catch (e: Exception) {
+            _scanState.value = ScanUiState.Erreur("Lancement du scan impossible : ${e.message}")
+        }
+    }
+
+    fun traiterResultatScan(result: com.journeyapps.barcodescanner.ScanIntentResult?) {
+        val contenu = result?.contents.orEmpty().ifBlank {
+            _scanState.value = ScanUiState.Erreur("Aucun QR Code détecté.")
+            return
+        }
+
+        val currentState = _scanState.value
+        viewModelScope.launch {
+            _scanState.value = ScanUiState.Traitement
+
+            val isTeacherClose = contenu.startsWith("teacher-close-")
+            var seanceId = if (isTeacherClose) {
+                contenu.substringAfter("teacher-close-").toIntOrNull()
+            } else {
+                extraireSeanceId(contenu)
+            }
+
+            if (seanceId == null && !isTeacherClose) {
+                val resolved = repository.resolveSeanceCourante(contenu)
+                if (resolved != null) {
+                    seanceId = resolved.seanceId
+                }
+            }
+
+            if (seanceId == null) {
+                _scanState.value = ScanUiState.Erreur("QR Code ou séance invalide.")
+                return@launch
+            }
+            seanceIdCourant = seanceId
+
+            val position = runCatching { obtenirDernierePosition() }.getOrNull()
+            val scanResult = if (currentState is ScanUiState.AttenteClotureEnseignant || isTeacherClose) {
+                repository.enregistrerSecondScan(
+                    contenuQr = contenu,
+                    lat = position?.first,
+                    lon = position?.second
+                )
+            } else {
+                repository.enregistrerPremierScan(
+                    contenuQr = contenu,
+                    lat = position?.first,
+                    lon = position?.second
+                )
+            }
+
+            when (scanResult) {
+                is ScanResult.ScanDebutEnregistre -> _scanState.value =
+                    ScanUiState.AttenteClotureEnseignant(scanResult.statutProvisoire)
+                is ScanResult.StatutFinalObtenu -> _scanState.value =
+                    ScanUiState.StatutFinal(scanResult.statut)
+                is ScanResult.RefusGeo -> _scanState.value =
+                    ScanUiState.Erreur("Localisation refusée : vous êtes hors du périmètre autorisé.")
+                is ScanResult.Erreur -> _scanState.value = ScanUiState.Erreur(scanResult.message)
+                else -> Unit
+            }
         }
     }
 
@@ -107,12 +169,38 @@ class ScanViewModel(
         _scanState.value = ScanUiState.Pret
     }
 
-    private fun extraireSeanceId(contenuQr: String): Int? {
+    private fun extraireSeanceId(contenu: String): Int? {
         return try {
-            contenuQr.substringAfter("seanceId=").substringBefore("&").toIntOrNull()
+            contenu.substringAfter("seanceId=").substringBefore("&").toIntOrNull()
         } catch (e: Exception) {
             null
         }
+    }
+
+    private suspend fun obtenirDernierePosition(): Pair<Double, Double>? = suspendCoroutine { continuation ->
+        try {
+            val fused: FusedLocationProviderClient =
+                LocationServices.getFusedLocationProviderClient(sessionManager.context)
+
+            fused.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                null
+            ).addOnSuccessListener { location ->
+                if (location != null) {
+                    continuation.resume(location.latitude to location.longitude)
+                } else {
+                    continuation.resume(null)
+                }
+            }.addOnFailureListener {
+                continuation.resume(null)
+            }
+        } catch (e: Exception) {
+            continuation.resume(null)
+        }
+    }
+
+    companion object {
+        const val RC_SCAN = 1001
     }
 }
 
