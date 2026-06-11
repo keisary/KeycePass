@@ -60,6 +60,7 @@ fun LoginScreen(
     var matricule by remember { mutableStateOf("") }
     var nom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
+    var serverUrl by remember { mutableStateOf("http://192.168.1.84:8080") }
     var selectedRole by remember { mutableStateOf<String?>(null) }
 
     val state by viewModel.enrolementState.collectAsState()
@@ -170,6 +171,25 @@ fun LoginScreen(
                 singleLine = true
             )
 
+            OutlinedTextField(
+                value = serverUrl,
+                onValueChange = { serverUrl = it },
+                label = { Text("URL serveur") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFF1E293B),
+                    unfocusedContainerColor = Color(0xFF1E293B),
+                    focusedBorderColor = Color(0xFF818CF8),
+                    unfocusedBorderColor = Color(0xFF334155),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedLabelColor = Color(0xFF818CF8),
+                    unfocusedLabelColor = Color(0xFF94A3B8)
+                ),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = true
+            )
+
             Text(
                 text = "Choisissez votre rôle :",
                 color = Color(0xFF94A3B8),
@@ -236,7 +256,7 @@ fun LoginScreen(
                         androidx.compose.material3.TextButton(
                             onClick = {
                                 val role = selectedRole ?: "ETUDIANT"
-                                val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=http://192.168.1.10:8080&role=$role"
+                                val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=${java.net.URLEncoder.encode(serverUrl, "UTF-8")}&role=$role"
                                 viewModel.enroler(context, matricule.trim(), nom.trim(), prenom.trim(), qrContent)
                             },
                             modifier = Modifier.fillMaxSize(),

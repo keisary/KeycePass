@@ -405,7 +405,7 @@ object KtorServer {
     }
 
     fun getServerUrl(): String {
-        return "http://keycepass.local:8080"
+        return "http://${getLocalIpAddress()}:8080"
     }
 }
 

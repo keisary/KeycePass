@@ -6,6 +6,8 @@ import com.ak.keycepass.desktop.data.database.ImportService
 import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.service.SeanceSemaineRow
 import com.ak.keycepass.desktop.data.service.SeanceSemaineService
+import com.ak.keycepass.desktop.data.service.EnseignantRow
+import com.ak.keycepass.desktop.data.service.SeanceRow
 import com.ak.keycepass.desktop.data.utils.QrCodeGenerator
 import com.ak.keycepass.desktop.data.server.KtorServer
 import com.ak.keycepass.shared.domain.model.StatutFinal
@@ -58,9 +60,10 @@ data class DashboardState(
     val total: Int = 0,
     val rows: List<AttendanceRow> = emptyList(),
     val seanceStatut: StatutSeance = StatutSeance.PLANIFIE,
-    val selectedClasse: String = "B2_IT",
+    val selectedClasse: String = "Toutes",
     val selectedSemestre: String = "S2_2026",
-    val classes: List<String> = listOf("Toutes", "B1_IT", "B1_MANAGEMENT", "B2_IT", "B2_MANAGEMENT", "B3_IT", "B3_MANAGEMENT"),
+    // Classes chargees depuis la BDD uniquement — pas de valeur hardcodee
+    val classes: List<String> = listOf("Toutes"),
     val semestres: List<String> = listOf("Tous", "S1_2025", "S2_2025", "S1_2026", "S2_2026"),
     val enseignant: TeacherProfile = TeacherProfile(),
     val statutFilter: StatutFinal? = null
@@ -131,6 +134,12 @@ class AdminViewModel {
     private val _historiqueBackend = MutableStateFlow<List<HistoriqueEntry>>(emptyList())
     val historiqueBackend: StateFlow<List<HistoriqueEntry>> = _historiqueBackend.asStateFlow()
 
+    private val _enseignants = MutableStateFlow<List<EnseignantRow>>(emptyList())
+    val enseignants: StateFlow<List<EnseignantRow>> = _enseignants.asStateFlow()
+
+    private val _seancesSemaine = MutableStateFlow<List<SeanceRow>>(emptyList())
+    val seancesSemaine: StateFlow<List<SeanceRow>> = _seancesSemaine.asStateFlow()
+
     private val _periodeStats = MutableStateFlow(PeriodeStats.SEMAINE)
     val periodeStats: StateFlow<PeriodeStats> = _periodeStats.asStateFlow()
 
@@ -186,7 +195,9 @@ class AdminViewModel {
     )
 
     init {
+        chargerToutesLesClasses()
         chargerDonneesDepuisDB()
+        chargerEnseignants()
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -279,7 +290,7 @@ class AdminViewModel {
     fun filterByClasse(classe: String) {
         if (classe != _state.value.selectedClasse) {
             _state.value = _state.value.copy(selectedClasse = classe)
-            chargerDonneesMockees(classe)
+            chargerDonneesDepuisDB()
         }
     }
 
@@ -329,11 +340,12 @@ class AdminViewModel {
                     val seanceId = seance[SeanceTable.idSeance]
                     val classeId = seance[SeanceTable.classeId]
 
-                    // Tous les etudiants de la classe
+                    // Tous les etudiants de la classe qui ont un deviceUuid (enrolés)
                     val etudiants = EtudiantTable
                         .selectAll()
                         .where { EtudiantTable.classeId eq classeId }
                         .toList()
+                        .filter { !it[EtudiantTable.deviceUuid].isNullOrEmpty() }
 
                     // Emargements pour cette seance
                     val emargements = EmargementTable
@@ -389,12 +401,28 @@ class AdminViewModel {
                         )
                     )
                 } else {
-                    // Fallback mock
-                    chargerDonneesMockees(_state.value.selectedClasse)
+                    val dbClasses = ImportService.getAllClasses()
+                    _state.value = _state.value.copy(
+                        rows = emptyList(),
+                        presents = 0,
+                        lates = 0,
+                        absents = 0,
+                        total = 0,
+                        seanceStatut = StatutSeance.PLANIFIE,
+                        classes = listOf("Toutes") + dbClasses
+                    )
                 }
             } catch (e: Exception) {
                 println("[KeycePass] Erreur chargement DB: ${e.message}")
-                chargerDonneesMockees(_state.value.selectedClasse)
+                val dbClasses = try { ImportService.getAllClasses() } catch (ex: Exception) { emptyList() }
+                _state.value = _state.value.copy(
+                    rows = emptyList(),
+                    presents = 0,
+                    lates = 0,
+                    absents = 0,
+                    total = 0,
+                    classes = listOf("Toutes") + dbClasses
+                )
             }
         }
     }
@@ -425,7 +453,11 @@ class AdminViewModel {
     fun chargerToutesLesClasses() {
         scope.launch(Dispatchers.IO) {
             try {
-                _classes.value = ImportService.getAllClasses()
+                val dbClasses = ImportService.getAllClasses()
+                _classes.value = dbClasses
+                _state.value = _state.value.copy(
+                    classes = listOf("Toutes") + dbClasses
+                )
             } catch (e: Exception) {
                 println("[KeycePass] Erreur chargement classes: ${e.message}")
             }
@@ -598,7 +630,111 @@ class AdminViewModel {
     }
 
     fun onDestroy() { scope.cancel() }
+
+    // ─── Enseignants ───────────────────────────────────────────────
+
+    fun chargerEnseignants() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                _enseignants.value = SeanceSemaineService.getTousLesEnseignants()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement enseignants: ${e.message}")
+            }
+        }
+    }
+
+    fun creerEnseignant(matricule: String, nom: String, prenom: String) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                SeanceSemaineService.creerEnseignant(matricule, nom, prenom)
+                chargerEnseignants()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur creation enseignant: ${e.message}")
+            }
+        }
+    }
+
+    // ─── Séances d'une semaine ──────────────────────────────────────
+
+    fun chargerSeancesDeLaSemaine(semaineId: Int) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                _seancesSemaine.value = SeanceSemaineService.getSeancesParSemaine(semaineId)
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur chargement seances: ${e.message}")
+            }
+        }
+    }
+
+    fun ajouterSeanceALaSemaine(
+        semaineId: Int,
+        nomMatiere: String,
+        classeId: String,
+        dateJour: String,
+        heureDebut: String,
+        heureFin: String,
+        enseignantId: Int?
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                SeanceSemaineService.ajouterSeanceALaSemaine(
+                    semaineId = semaineId,
+                    nomMatiere = nomMatiere,
+                    classeId = classeId,
+                    dateJour = dateJour,
+                    heureDebut = heureDebut,
+                    heureFin = heureFin,
+                    enseignantId = enseignantId
+                )
+                chargerSeancesDeLaSemaine(semaineId)
+                chargerDonneesDepuisDB()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur ajout seance: ${e.message}")
+            }
+        }
+    }
+
+    fun enregistrerSeance(
+        idSeance: Int?,
+        semaineId: Int,
+        nomMatiere: String,
+        classeId: String,
+        dateJour: String,
+        heureDebut: String,
+        heureFin: String,
+        enseignantId: Int?
+    ) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                SeanceSemaineService.enregistrerSeance(
+                    idSeance = idSeance,
+                    semaineId = semaineId,
+                    nomMatiere = nomMatiere,
+                    classeId = classeId,
+                    dateJour = dateJour,
+                    heureDebut = heureDebut,
+                    heureFin = heureFin,
+                    enseignantId = enseignantId
+                )
+                chargerSeancesDeLaSemaine(semaineId)
+                chargerDonneesDepuisDB()
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur enregistrement seance: ${e.message}")
+            }
+        }
+    }
+
+    fun genererFichierTestExcel(destination: File) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                ImportService.genererFichierTestExcel(destination)
+            } catch (e: Exception) {
+                println("[KeycePass] Erreur generation Excel test: ${e.message}")
+            }
+        }
+    }
 }
+
 
 // ─── États pour l'UI d'import Excel ───────────────────────────────────
 sealed class ImportState {

@@ -15,11 +15,11 @@ object DatabaseManager {
 
     /**
      * Chemin physique du fichier de base de données.
-     * Stocké dans le dossier utilisateur système : ~/keycepass/keycepass_central.db
+     * Stocké dans le dossier "database" à la racine du projet.
      */
     val dbPath: String
         get() {
-            val dir = File(System.getProperty("user.home"), "keycepass")
+            val dir = File("database")
             dir.mkdirs()
             return File(dir, DB_FILENAME).absolutePath
         }
