@@ -2,6 +2,7 @@ package com.ak.keycepass.android.ui.screens
 
 import android.Manifest
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +29,8 @@ import com.ak.keycepass.android.ui.viewmodel.ScanUiState
 import com.ak.keycepass.android.ui.viewmodel.ScanViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -37,6 +40,15 @@ fun ScanScreen(
 ) {
     val context = LocalContext.current
     val scanState by viewModel.scanState.collectAsStateWithLifecycle()
+
+    val barcodeLauncher = rememberLauncherForActivityResult(
+        contract = ScanContract(),
+        onResult = { result ->
+            if (result.contents != null) {
+                viewModel.traiterResultatScan(result)
+            }
+        }
+    )
 
     var handledError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(scanState) {
@@ -86,7 +98,16 @@ fun ScanScreen(
             }
             scanState is ScanUiState.Pret -> {
                 Button(
-                    onClick = { viewModel.lancerScan(context) },
+                    onClick = {
+                        val options = ScanOptions().apply {
+                            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                            setPrompt("Placez le QR Code dans le cadre")
+                            setBeepEnabled(true)
+                            setOrientationLocked(false)
+                            captureActivity = com.journeyapps.barcodescanner.CaptureActivity::class.java
+                        }
+                        barcodeLauncher.launch(options)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
@@ -131,7 +152,16 @@ fun ScanScreen(
                 if (scanState is ScanUiState.AttenteClotureEnseignant) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { viewModel.lancerScan(context) },
+                        onClick = {
+                            val options = ScanOptions().apply {
+                                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                                setPrompt("Placez le QR Code dans le cadre")
+                                setBeepEnabled(true)
+                                setOrientationLocked(false)
+                                captureActivity = com.journeyapps.barcodescanner.CaptureActivity::class.java
+                            }
+                            barcodeLauncher.launch(options)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Scanner le QR de fin de cours")

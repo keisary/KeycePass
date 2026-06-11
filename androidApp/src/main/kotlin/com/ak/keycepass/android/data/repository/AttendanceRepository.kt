@@ -318,11 +318,16 @@ class AttendanceRepository(
         return try {
             val query = contenu.substringAfter("?", "")
             if (query.isEmpty()) return emptyMap()
-            query.split("&").associate { param ->
-                val (key, value) = param.split("=", limit = 2)
-                val decodedValue = java.net.URLDecoder.decode(value, "UTF-8")
-                key to decodedValue
-            }
+            query.split("&").mapNotNull { param ->
+                val parts = param.split("=", limit = 2)
+                if (parts.size == 2) {
+                    val key = parts[0]
+                    val value = java.net.URLDecoder.decode(parts[1], "UTF-8")
+                    key to value
+                } else {
+                    null
+                }
+            }.toMap()
         } catch (e: Exception) {
             emptyMap()
         }

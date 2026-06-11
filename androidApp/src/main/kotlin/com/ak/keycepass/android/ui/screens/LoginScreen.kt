@@ -259,7 +259,8 @@ fun LoginScreen(
                         androidx.compose.material3.TextButton(
                             onClick = {
                                 val role = selectedRole ?: "ETUDIANT"
-                                val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=$serverUrl&role=$role"
+                                val cleanedUrl = serverUrl.trim().removeSuffix("/")
+                                val qrContent = "keycepass://enrolement?classeId=B2_IT&token=DEMO123&serverUrl=${java.net.URLEncoder.encode(cleanedUrl, "UTF-8")}&role=$role"
                                 viewModel.enroler(context, matricule.trim(), nom.trim(), prenom.trim(), qrContent)
                             },
                             modifier = Modifier.fillMaxSize(),

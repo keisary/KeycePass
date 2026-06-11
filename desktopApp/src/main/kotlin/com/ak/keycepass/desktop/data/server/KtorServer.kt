@@ -1,6 +1,7 @@
 package com.ak.keycepass.desktop.data.server
 
 import com.ak.keycepass.desktop.data.database.EtudiantTable
+import com.ak.keycepass.desktop.data.database.EnseignantTable
 import com.ak.keycepass.desktop.data.database.EmargementTable
 import com.ak.keycepass.desktop.data.database.SeanceTable
 import com.ak.keycepass.desktop.data.database.SeanceSemaineTable
@@ -10,6 +11,7 @@ import com.ak.keycepass.shared.network.ScanResponse
 import com.ak.keycepass.shared.network.ScanType
 import com.ak.keycepass.shared.network.SessionStatusDto
 import com.ak.keycepass.shared.network.SeanceCouranteDto
+import com.ak.keycepass.shared.network.SeanceDto
 import io.ktor.http.HttpStatusCode
 import com.ak.keycepass.shared.domain.utils.StatutUtils
 import io.ktor.serialization.kotlinx.json.*
@@ -55,21 +57,39 @@ object KtorServer {
                     val success = transaction {
                         val etudiant = EtudiantTable
                             .selectAll()
-                            .where { EtudiantTable.matricule eq payload.matricule }
+                            .where { EtudiantTable.matricule.lowerCase() eq payload.matricule.trim().lowercase() }
                             .firstOrNull()
 
-                        if (etudiant == null) return@transaction false
+                        if (etudiant != null) {
+                            // Vérifie si un UUID est déjà lié (anti-fraude)
+                            val uuidExistant = etudiant[EtudiantTable.deviceUuid]
+                            if (!uuidExistant.isNullOrEmpty() && uuidExistant != payload.deviceUuid) {
+                                return@transaction false
+                            }
 
-                        // Vérifie si un UUID est déjà lié (anti-fraude)
-                        val uuidExistant = etudiant[EtudiantTable.deviceUuid]
-                        if (!uuidExistant.isNullOrEmpty() && uuidExistant != payload.deviceUuid) {
-                            return@transaction false
-                        }
+                            EtudiantTable.update({ EtudiantTable.matricule.lowerCase() eq payload.matricule.trim().lowercase() }) {
+                                it[deviceUuid] = payload.deviceUuid
+                            }
+                            true
+                        } else {
+                            // Tenter l'enrôlement de l'enseignant
+                            val enseignant = EnseignantTable
+                                .selectAll()
+                                .where { EnseignantTable.matriculeEnseignant.lowerCase() eq payload.matricule.trim().lowercase() }
+                                .firstOrNull()
 
-                        EtudiantTable.update({ EtudiantTable.matricule eq payload.matricule }) {
-                            it[deviceUuid] = payload.deviceUuid
+                            if (enseignant == null) return@transaction false
+
+                            val uuidExistant = enseignant[EnseignantTable.deviceUuid]
+                            if (!uuidExistant.isNullOrEmpty() && uuidExistant != payload.deviceUuid) {
+                                return@transaction false
+                            }
+
+                            EnseignantTable.update({ EnseignantTable.matriculeEnseignant.lowerCase() eq payload.matricule.trim().lowercase() }) {
+                                it[deviceUuid] = payload.deviceUuid
+                            }
+                            true
                         }
-                        true
                     }
                     call.respond(EnrolementResponse(success = success))
                 }
@@ -83,7 +103,7 @@ object KtorServer {
                         // 1. Vérifier que l'appareil est bien lié à l'étudiant
                         val etudiant = EtudiantTable
                             .selectAll()
-                            .where { EtudiantTable.matricule eq payload.matricule }
+                            .where { EtudiantTable.matricule.lowerCase() eq payload.matricule.trim().lowercase() }
                             .firstOrNull()
 
                         if (etudiant == null) {
@@ -302,6 +322,24 @@ object KtorServer {
                     }
                 }
 
+                // ─── Récupérer la liste complète des séances ────────────────
+                get("/api/seances") {
+                    val list = transaction {
+                        SeanceTable.selectAll().map {
+                            SeanceDto(
+                                idSeance = it[SeanceTable.idSeance],
+                                nomMatiere = it[SeanceTable.nomMatiere],
+                                classeId = it[SeanceTable.classeId],
+                                dateJour = it[SeanceTable.dateJour],
+                                heureDebut = it[SeanceTable.heureDebut],
+                                heureFin = it[SeanceTable.heureFin],
+                                statutSeance = it[SeanceTable.statutSeance]
+                            )
+                        }
+                    }
+                    call.respond(list)
+                }
+
                 // ─── Sync différé mobile → serveur ──────────────────────────
                 // Reçoit les scans stockés hors-ligne (Room) quand le réseau revient
                 post("/api/sync") {
@@ -314,7 +352,7 @@ object KtorServer {
                             try {
                                 val etudiant = EtudiantTable
                                     .selectAll()
-                                    .where { EtudiantTable.matricule eq payload.matricule }
+                                    .where { EtudiantTable.matricule.lowerCase() eq payload.matricule.trim().lowercase() }
                                     .firstOrNull() ?: return@forEach
 
                                 val etudiantId = etudiant[EtudiantTable.idEtudiant]
