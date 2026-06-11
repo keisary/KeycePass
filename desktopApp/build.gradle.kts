@@ -21,6 +21,9 @@ dependencies {
     // Module partagé
     implementation(project(":shared"))
 
+    // Tests unitaires JVM
+    testImplementation(kotlin("test"))
+
     // Kotlin Coroutines
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.swing)
