@@ -16,10 +16,11 @@ class MainActivity : ComponentActivity() {
 
         val database = LocalDatabase.getDatabase(applicationContext)
         val sessionManager = SessionManager(applicationContext)
+        val serverUrl = sessionManager.serverUrl ?: "http://localhost:8080"
         val repository = AttendanceRepository(
             sessionManager = sessionManager,
             db = database,
-            networkClient = NetworkClient("http://localhost:8080")
+            networkClient = NetworkClient(serverUrl)
         )
 
         setContent {

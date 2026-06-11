@@ -301,6 +301,10 @@ class AttendanceRepository(
     suspend fun resolveSeanceCourante(contenuQr: String): SeanceCouranteDto? = withContext(Dispatchers.IO) {
         val params = parseQrParams(contenuQr)
         val semaineId = params["semaineId"]?.toIntOrNull() ?: return@withContext null
+        val serverUrl = params["serverUrl"]
+        if (serverUrl != null) {
+            networkClient.serverBaseUrl = serverUrl
+        }
         networkClient.getSeanceCourante(semaineId)
     }
 
@@ -316,7 +320,8 @@ class AttendanceRepository(
             if (query.isEmpty()) return emptyMap()
             query.split("&").associate { param ->
                 val (key, value) = param.split("=", limit = 2)
-                key to value
+                val decodedValue = java.net.URLDecoder.decode(value, "UTF-8")
+                key to decodedValue
             }
         } catch (e: Exception) {
             emptyMap()
@@ -333,6 +338,33 @@ class AttendanceRepository(
 
     suspend fun mettreAJourStatutSeance(seanceId: Int, statut: String) = withContext(Dispatchers.IO) {
         db.seanceDao().mettreAJourStatut(seanceId, statut)
+    }
+
+    /**
+     * Synchronise les séances en interrogeant le serveur Desktop et met à jour Room.
+     */
+    suspend fun synchroniserSeances(): List<com.ak.keycepass.android.data.local.entities.SeanceLocal> = withContext(Dispatchers.IO) {
+        try {
+            val serverList = networkClient.getToutesLesSeances()
+            if (serverList.isNotEmpty()) {
+                serverList.forEach {
+                    db.seanceDao().insert(
+                        com.ak.keycepass.android.data.local.entities.SeanceLocal(
+                            idSeance = it.idSeance,
+                            nomMatiere = it.nomMatiere,
+                            classeId = it.classeId,
+                            dateJour = it.dateJour,
+                            heureDebut = it.heureDebut,
+                            heureFin = it.heureFin,
+                            statut = it.statutSeance
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            // Ignorer l'erreur réseau et continuer
+        }
+        db.seanceDao().obtenirToutesLesSeances()
     }
 }
 

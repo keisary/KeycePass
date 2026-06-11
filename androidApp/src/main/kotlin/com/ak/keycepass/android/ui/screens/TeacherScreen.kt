@@ -89,50 +89,71 @@ fun TeacherScreen(
                 color = Color(0xFF94A3B8)
             )
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.4f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(seances) { seance ->
-                    val isSelected = activeSeance?.idSeance == seance.idSeance
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) Color(0xFF312E81) else Color(0xFF1E293B)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.selectSeance(seance) }
-                    ) {
-                        Row(
+            if (seances.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.4f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Aucune séance disponible.\nSynchronisation en cours...",
+                        color = Color(0xFF94A3B8),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.4f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(seances) { seance ->
+                        val isSelected = activeSeance?.idSeance == seance.idSeance
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Color(0xFF312E81) else Color(0xFF1E293B)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .clickable { viewModel.selectSeance(seance) }
                         ) {
-                            Column {
-                                Text(
-                                    text = seance.nomMatiere,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = "Date : ${seance.dateJour} | Classe : ${seance.classeId}",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF94A3B8)
-                                )
-                            }
-                            if (seance.statutSeance == StatutSeance.CLOTURE_ENSEIGNANT) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(StateSuccess.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                ) {
-                                    Text("Clôturé", fontSize = 11.sp, color = StateSuccess, fontWeight = FontWeight.Bold)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = seance.nomMatiere,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "${seance.dateJour} | ${seance.heureDebut}-${seance.heureFin}",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                    Text(
+                                        text = "Classe : ${seance.classeId}",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF64748B)
+                                    )
+                                }
+                                if (seance.statutSeance == StatutSeance.CLOTURE_ENSEIGNANT) {
+                                    Box(
+                                        modifier = Modifier
+                                            .background(StateSuccess.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text("Clôturé", fontSize = 11.sp, color = StateSuccess, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -162,7 +183,7 @@ fun TeacherScreen(
                         .fillMaxWidth()
                         .weight(0.6f),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Code de validation de fin de cours",
@@ -173,34 +194,56 @@ fun TeacherScreen(
                     )
 
                     Text(
-                        text = "Faites flasher ce code aux étudiants pour valider juridiquement la fin de séance.",
+                        text = "Appuyez d'abord sur \"Clôturer\" pour activer le scan de fin, puis montrez le QR.",
                         fontSize = 13.sp,
                         color = Color(0xFF94A3B8),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
 
-                    qrBitmap?.let { bitmap ->
-                        Box(
-                            modifier = Modifier
-                                .size(200.dp)
-                                .background(Color.White, RoundedCornerShape(12.dp))
-                                .padding(12.dp)
-                        ) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "QR Code Clôture Enseignant",
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
+                    val estCloture = activeSeance?.statutSeance == StatutSeance.CLOTURE_ENSEIGNANT
 
-                    Text(
-                        text = "Séance ID : ${activeSeance?.idSeance}",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF818CF8)
-                    )
+                    if (!estCloture) {
+                        Button(
+                            onClick = { viewModel.cloturerSeanceActive() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.QrCode, contentDescription = null, tint = Color.White)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clôturer la séance", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        qrBitmap?.let { bitmap ->
+                            Box(
+                                modifier = Modifier
+                                    .size(200.dp)
+                                    .background(Color.White, RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Image(
+                                    bitmap = bitmap.asImageBitmap(),
+                                    contentDescription = "QR Code Clôture Enseignant",
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Séance clôturée ✓ | ID : ${activeSeance?.idSeance}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = StateSuccess
+                        )
+
+                        Text(
+                            text = "Montrez ce QR Code aux étudiants pour qu'ils scannent la fin du cours.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF94A3B8),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }

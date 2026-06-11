@@ -60,7 +60,7 @@ fun LoginScreen(
     var matricule by remember { mutableStateOf("") }
     var nom by remember { mutableStateOf("") }
     var prenom by remember { mutableStateOf("") }
-    var serverUrl by remember { mutableStateOf("http://192.168.1.84:8080") }
+    var serverUrl by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf<String?>(null) }
 
     val state by viewModel.enrolementState.collectAsState()
@@ -68,7 +68,10 @@ fun LoginScreen(
     LaunchedEffect(state) {
         val current = state
         if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Succes) {
-            navController.navigate("scan")
+            val destination = if (current.role == "ENSEIGNANT") "teacher" else "scan"
+            navController.navigate(destination) {
+                popUpTo("enrolement") { inclusive = true }
+            }
             viewModel.reinitialiser()
         }
         if (current is com.ak.keycepass.android.ui.viewmodel.EnrolementUiState.Erreur) {
@@ -231,7 +234,7 @@ fun LoginScreen(
             }
 
             Text(
-                text = "(Simulation : sélectionnez un rôle, puis cliquez sur S'inscrire pour continuer.)",
+                text = "Renseignez l'URL du serveur fournie par votre administrateur.",
                 fontSize = 12.sp,
                 color = Color(0xFF475569),
                 textAlign = TextAlign.Center

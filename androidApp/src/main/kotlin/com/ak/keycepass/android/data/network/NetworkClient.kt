@@ -4,6 +4,7 @@ import com.ak.keycepass.shared.network.ScanPayload
 import com.ak.keycepass.shared.network.ScanResponse
 import com.ak.keycepass.shared.network.SessionStatusDto
 import com.ak.keycepass.shared.network.SeanceCouranteDto
+import com.ak.keycepass.shared.network.SeanceDto
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.okhttp.*
@@ -118,6 +119,17 @@ class NetworkClient(var serverBaseUrl: String) {
             client.get("$serverBaseUrl/api/semaine/$semaineId/seance-courante").body()
         } catch (e: Exception) {
             null
+        }
+    }
+
+    /**
+     * Récupère toutes les séances planifiées sur le serveur desktop.
+     */
+    suspend fun getToutesLesSeances(): List<SeanceDto> {
+        return try {
+            client.get("$serverBaseUrl/api/seances").body()
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 

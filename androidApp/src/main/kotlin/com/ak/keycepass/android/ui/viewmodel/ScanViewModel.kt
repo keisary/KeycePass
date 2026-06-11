@@ -42,29 +42,38 @@ class ScanViewModel(
 
     fun chargerSeances() {
         viewModelScope.launch {
-            val listLocal = repository.obtenirToutesLesSeances()
-            if (listLocal.isEmpty()) {
-                val listDummy = listOf(
-                    SeanceLocal(101, "Ingénierie Logicielle", "B2_IT", "2026-06-11", "08:00:00", "10:00:00", "EN_COURS"),
-                    SeanceLocal(102, "Algorithmique", "B2_IT", "2026-06-11", "10:15:00", "12:15:00", "PLANIFIE"),
-                    SeanceLocal(103, "Réseaux Mobiles", "B2_IT", "2026-06-11", "13:30:00", "15:30:00", "PLANIFIE")
-                )
-                listDummy.forEach { repository.insererSeance(it) }
-                _seances.value = listDummy.map { it.toSeance() }
-            } else {
-                _seances.value = listLocal.map { it.toSeance() }
+            // 1. Tenter d'abord une synchronisation avec le serveur
+            val serverList = try { repository.synchroniserSeances() } catch (e: Exception) { emptyList() }
+
+            if (serverList.isNotEmpty()) {
+                _seances.value = serverList.map { it.toSeance() }
+                return@launch
             }
+
+            // 2. Charger depuis la DB locale si déjà remplie
+            val listLocal = repository.obtenirToutesLesSeances()
+            if (listLocal.isNotEmpty()) {
+                _seances.value = listLocal.map { it.toSeance() }
+                return@launch
+            }
+
+            // 3. Si rien n'est disponible, afficher une liste vide
+            // (on n'insère plus de données dummy pour éviter de polluer la DB)
+            _seances.value = emptyList()
         }
     }
 
     fun selectSeance(seance: Seance) {
         _activeSeance.value = seance
+    }
+
+    fun cloturerSeanceActive() {
+        val seance = _activeSeance.value ?: return
         viewModelScope.launch {
             val success = repository.cloturerSeance(seance.idSeance)
             if (success) {
                 repository.mettreAJourStatutSeance(seance.idSeance, StatutSeance.CLOTURE_ENSEIGNANT.name)
                 chargerSeances()
-                // Update activeSeance state flow too
                 _activeSeance.value = _activeSeance.value?.copy(statutSeance = StatutSeance.CLOTURE_ENSEIGNANT)
             }
         }
