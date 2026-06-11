@@ -28,7 +28,7 @@ fun main() = application {
 
     // 2. Démarrage du serveur Ktor
     KtorServer.start(port = 8080)
-    println("[KeycePass] Serveur démarré sur http://192.168.1.84:8080")
+    println("[KeycePass] Serveur démarré sur ${KtorServer.getServerUrl()}")
 
     // 3. Annonce mDNS (keycepass.local)
     MdnsService.start(port = 8080)
