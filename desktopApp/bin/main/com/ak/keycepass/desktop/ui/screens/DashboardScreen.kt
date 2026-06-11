@@ -324,7 +324,7 @@ fun DashboardScreen(viewModel: AdminViewModel = remember { AdminViewModel() }) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Etudiant", Modifier.weight(1f), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Statut", Modifier.width(72.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
+                        Text("Statut", Modifier.width(80.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("Arrivee", Modifier.width(52.dp), fontWeight = FontWeight.SemiBold, fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -423,19 +423,26 @@ private fun KpiMini(
 
 @Composable
 private fun StudentRow(row: AttendanceRow) {
-    val statutColor = when (row.statut) {
+    val isEnrolled = row.isEnrolled
+    val statutColor = if (!isEnrolled) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else when (row.statut) {
         StatutFinal.PRESENT -> StatusPresent
         StatutFinal.RETARD -> StatusLate
         StatutFinal.ABSENT -> StatusAbsent
         StatutFinal.EN_ATTENTE -> StatusPending
     }
-    val statutBg = when (row.statut) {
+    val statutBg = if (!isEnrolled) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
+    } else when (row.statut) {
         StatutFinal.PRESENT -> StatusPresentBg
         StatutFinal.RETARD -> StatusLateBg
         StatutFinal.ABSENT -> StatusAbsentBg
         StatutFinal.EN_ATTENTE -> Color.DarkGray.copy(alpha = 0.1f)
     }
-    val statutLabel = when (row.statut) {
+    val statutLabel = if (!isEnrolled) {
+        "Non Enrôlé"
+    } else when (row.statut) {
         StatutFinal.PRESENT -> "Present"
         StatutFinal.RETARD -> "Retard"
         StatutFinal.ABSENT -> "Absent"
@@ -460,11 +467,13 @@ private fun StudentRow(row: AttendanceRow) {
         Spacer(Modifier.width(4.dp))
 
         // Badge statut compact
-        Surface(Modifier.width(72.dp), shape = RoundedCornerShape(4.dp), color = statutBg) {
+        Surface(Modifier.width(80.dp), shape = RoundedCornerShape(4.dp), color = statutBg) {
             Row(Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center) {
-                Box(Modifier.size(4.dp).clip(CircleShape).background(statutColor))
-                Spacer(Modifier.width(3.dp))
+                if (isEnrolled) {
+                    Box(Modifier.size(4.dp).clip(CircleShape).background(statutColor))
+                    Spacer(Modifier.width(3.dp))
+                }
                 Text(statutLabel, fontSize = 10.sp, fontWeight = FontWeight.SemiBold,
                     color = statutColor, textAlign = TextAlign.Center)
             }

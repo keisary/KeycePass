@@ -64,3 +64,17 @@ data class SeanceCouranteDto(
     val heureDebut: String,
     val heureFin: String
 )
+
+/**
+ * Informations complètes d'une séance retournées par l'API.
+ */
+@Serializable
+data class SeanceDto(
+    val idSeance: Int,
+    val nomMatiere: String,
+    val classeId: String,
+    val dateJour: String,
+    val heureDebut: String,
+    val heureFin: String,
+    val statutSeance: String
+)

@@ -1,5 +1,8 @@
 package com.ak.keycepass.shared.domain.model
 
+import kotlinx.serialization.Serializable
+
+
 /**
  * Représente une séance de cours au sein du système KeycePass.
  * Basé sur la structure de la table 'Seance' du cahier des charges.
@@ -17,6 +20,7 @@ data class Seance(
 /**
  * Les trois états possibles d'une séance selon les exigences du projet.
  */
+@Serializable
 enum class StatutSeance {
     PLANIFIE, 
     EN_COURS, 
