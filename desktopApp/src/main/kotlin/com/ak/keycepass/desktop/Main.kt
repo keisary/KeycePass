@@ -17,6 +17,8 @@ import com.ak.keycepass.desktop.ui.AdminLayout
 import com.ak.keycepass.desktop.ui.theme.KeycePassTheme
 import kotlinx.coroutines.launch
 
+import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
+
 fun main() = application {
     val appScope = rememberCoroutineScope()
 
@@ -51,12 +53,16 @@ fun main() = application {
             println("[KeycePass] Fenêtre Compose créée")
         }
 
+        // ViewModel unique partagé entre tous les onglets — l'état persiste lors de la navigation
+        val sharedVm = remember { AdminViewModel() }
+
         KeycePassTheme {
             Surface(Modifier.fillMaxSize()) {
                 var currentScreen by remember { mutableStateOf(Screen.DASHBOARD) }
                 AdminLayout(
                     currentScreen = currentScreen,
-                    onNavigate = { currentScreen = it }
+                    onNavigate = { currentScreen = it },
+                    vm = sharedVm
                 )
             }
         }

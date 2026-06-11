@@ -18,8 +18,7 @@ import com.ak.keycepass.desktop.ui.viewmodel.AdminViewModel
 import com.ak.keycepass.desktop.ui.viewmodel.PairedDevice
 
 @Composable
-fun GestionEnrolementScreen() {
-    val vm = remember { AdminViewModel() }
+fun GestionEnrolementScreen(vm: AdminViewModel = remember { AdminViewModel() }) {
     val devices by vm.pairedDevices.collectAsState()
 
     // Charger au demarrage

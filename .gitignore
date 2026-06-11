@@ -58,3 +58,10 @@ hs_err_pid*
 !/.gitignore
 yarn.lock
 package-lock.json
+
+# === Database ===
+/database/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
