@@ -65,3 +65,4 @@ package-lock.json
 *.db-journal
 *.db-shm
 *.db-wal
+!desktopApp/database/keycepass_central.db
