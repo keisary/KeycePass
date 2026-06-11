@@ -35,8 +35,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QRManagementScreen() {
-    val vm = remember { AdminViewModel() }
+fun QRManagementScreen(vm: AdminViewModel = remember { AdminViewModel() }) {
     val classes by vm.classes.collectAsState()
     val qrImage by vm.qrCodeImage.collectAsState()
     val semaines by vm.semaines.collectAsState()
