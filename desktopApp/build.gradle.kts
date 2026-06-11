@@ -54,6 +54,9 @@ dependencies {
     // mDNS (découverte réseau — keycepass.local)
     implementation("org.jmdns:jmdns:3.5.9")
 
+    // Logging (supprime les warnings SLF4J/Log4j en console)
+    implementation("org.slf4j:slf4j-simple:2.0.13")
+
     // Compose Desktop
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
