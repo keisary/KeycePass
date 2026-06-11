@@ -325,64 +325,92 @@ class AdminViewModel {
                 val maintenant = java.time.LocalTime.now().toString().substring(0, 8)
 
                 val result = transaction {
-                    // Chercher seance en cours aujourd'hui
+                    // Chercher seance en cours aujourd'hui pour la classe selectionnee
                     val seance = SeanceTable
                         .selectAll()
                         .where {
-                            (SeanceTable.dateJour eq aujourdhui) and
-                            (SeanceTable.heureDebut lessEq maintenant) and
-                            (SeanceTable.heureFin greaterEq maintenant)
+                            val cond = (SeanceTable.dateJour eq aujourdhui) and
+                                    (SeanceTable.heureDebut lessEq maintenant) and
+                                    (SeanceTable.heureFin greaterEq maintenant)
+                            if (classe != "Toutes" && classe.isNotEmpty()) {
+                                cond and (SeanceTable.classeId eq classe)
+                            } else {
+                                cond
+                            }
                         }
                         .orderBy(SeanceTable.idSeance to org.jetbrains.exposed.sql.SortOrder.DESC)
                         .firstOrNull()
 
-                    if (seance == null) return@transaction null
-
-                    val seanceId = seance[SeanceTable.idSeance]
-                    val classeId = seance[SeanceTable.classeId]
-
-                    // Tous les etudiants de la classe
-                    val etudiants = EtudiantTable
-                        .selectAll()
-                        .where { EtudiantTable.classeId eq classeId }
-                        .toList()
-
-                    // Emargements pour cette seance
-                    val emargements = EmargementTable
-                        .selectAll()
-                        .where { EmargementTable.seanceId eq seanceId }
-                        .associateBy { it[EmargementTable.etudiantId] }
-
-                    val rows = etudiants.mapIndexed { index, etudiant ->
-                        val eid = etudiant[EtudiantTable.idEtudiant]
-                        val emarg = emargements[eid]
-                        val enrolled = !etudiant[EtudiantTable.deviceUuid].isNullOrEmpty()
-
-                        val statut = when (emarg?.get(EmargementTable.statutFinal)) {
-                            "PRESENT" -> StatutFinal.PRESENT
-                            "RETARD" -> StatutFinal.RETARD
-                            "ABSENT" -> StatutFinal.ABSENT
-                            "EN_ATTENTE" -> StatutFinal.EN_ATTENTE
-                            else -> StatutFinal.ABSENT
+                    if (seance == null) {
+                        // Pas de seance active
+                        val etudiants = if (classe == "Toutes" || classe.isEmpty()) {
+                            EtudiantTable.selectAll().toList()
+                        } else {
+                            EtudiantTable.selectAll().where { EtudiantTable.classeId eq classe }.toList()
                         }
-                        val debut = emarg?.get(EmargementTable.horodatageScanDebut) ?: "---"
-                        val fin = emarg?.get(EmargementTable.horodatageScanFin) ?: "---"
-                        val debutAbrege = if (debut.length >= 5) debut.takeLast(5) else debut
-                        val finAbrege = if (fin.length >= 5) fin.takeLast(5) else fin
 
-                        AttendanceRow(
-                            id = index + 1,
-                            nom = etudiant[EtudiantTable.nom],
-                            prenom = etudiant[EtudiantTable.prenom],
-                            matricule = etudiant[EtudiantTable.matricule],
-                            statut = statut,
-                            heureScanDebut = debutAbrege,
-                            heureScanFin = finAbrege,
-                            classe = classeId,
-                            isEnrolled = enrolled
-                        )
+                        val rows = etudiants.mapIndexed { index, etudiant ->
+                            val enrolled = !etudiant[EtudiantTable.deviceUuid].isNullOrEmpty()
+                            AttendanceRow(
+                                id = index + 1,
+                                nom = etudiant[EtudiantTable.nom],
+                                prenom = etudiant[EtudiantTable.prenom],
+                                matricule = etudiant[EtudiantTable.matricule],
+                                statut = StatutFinal.ABSENT,
+                                heureScanDebut = "---",
+                                heureScanFin = "---",
+                                classe = etudiant[EtudiantTable.classeId],
+                                isEnrolled = enrolled
+                            )
+                        }
+                        Pair(null, rows)
+                    } else {
+                        val seanceId = seance[SeanceTable.idSeance]
+                        val classeId = seance[SeanceTable.classeId]
+
+                        // Tous les etudiants de la classe
+                        val etudiants = EtudiantTable
+                            .selectAll()
+                            .where { EtudiantTable.classeId eq classeId }
+                            .toList()
+
+                        // Emargements pour cette seance
+                        val emargements = EmargementTable
+                            .selectAll()
+                            .where { EmargementTable.seanceId eq seanceId }
+                            .associateBy { it[EmargementTable.etudiantId] }
+
+                        val rows = etudiants.mapIndexed { index, etudiant ->
+                            val eid = etudiant[EtudiantTable.idEtudiant]
+                            val emarg = emargements[eid]
+                            val enrolled = !etudiant[EtudiantTable.deviceUuid].isNullOrEmpty()
+
+                            val statut = when (emarg?.get(EmargementTable.statutFinal)) {
+                                "PRESENT" -> StatutFinal.PRESENT
+                                "RETARD" -> StatutFinal.RETARD
+                                "ABSENT" -> StatutFinal.ABSENT
+                                "EN_ATTENTE" -> StatutFinal.EN_ATTENTE
+                                else -> StatutFinal.ABSENT
+                            }
+                            val debut = emarg?.get(EmargementTable.horodatageScanDebut) ?: "---"
+                            val fin = emarg?.get(EmargementTable.horodatageScanFin) ?: "---"
+                            val debutAbrege = if (debut.length >= 5) debut.takeLast(5) else debut
+                            val finAbrege = if (fin.length >= 5) fin.takeLast(5) else fin
+
+                            AttendanceRow(
+                                id = index + 1,
+                                nom = etudiant[EtudiantTable.nom],
+                                prenom = etudiant[EtudiantTable.prenom],
+                                matricule = etudiant[EtudiantTable.matricule],
+                                statut = statut,
+                                heureScanDebut = debutAbrege,
+                                heureScanFin = finAbrege,
+                                classe = classeId,
+                                isEnrolled = enrolled
+                            )
+                        }
+                        Pair(seance, rows)
                     }
-                    Pair(seance, rows)
                 }
 
                 if (result != null) {
@@ -390,6 +418,7 @@ class AdminViewModel {
                     val presents = rows.count { it.statut == StatutFinal.PRESENT }
                     val retards = rows.count { it.statut == StatutFinal.RETARD }
                     val absents = rows.count { it.statut == StatutFinal.ABSENT }
+                    val dbClasses = ImportService.getAllClasses()
 
                     _state.value = _state.value.copy(
                         presents = presents,
@@ -397,21 +426,11 @@ class AdminViewModel {
                         absents = absents,
                         total = rows.size,
                         rows = rows,
-                        seanceStatut = StatutSeance.EN_COURS,
+                        seanceStatut = if (seanceRow != null) StatutSeance.EN_COURS else StatutSeance.PLANIFIE,
+                        classes = (listOf("Toutes") + dbClasses).distinct(),
                         enseignant = _state.value.enseignant.copy(
-                            matiereCourante = seanceRow[SeanceTable.nomMatiere] ?: "Cours"
+                            matiereCourante = seanceRow?.get(SeanceTable.nomMatiere) ?: "Aucune seance en cours"
                         )
-                    )
-                } else {
-                    val dbClasses = ImportService.getAllClasses()
-                    _state.value = _state.value.copy(
-                        rows = emptyList(),
-                        presents = 0,
-                        lates = 0,
-                        absents = 0,
-                        total = 0,
-                        seanceStatut = StatutSeance.PLANIFIE,
-                        classes = listOf("Toutes") + dbClasses
                     )
                 }
             } catch (e: Exception) {
