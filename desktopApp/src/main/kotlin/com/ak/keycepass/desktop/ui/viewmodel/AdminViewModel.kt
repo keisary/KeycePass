@@ -48,7 +48,8 @@ data class AttendanceRow(
     val heureScanDebut: String,
     val heureScanFin: String,
     val classe: String = "B2_IT",
-    val semestre: String = "S2_2026"
+    val semestre: String = "S2_2026",
+    val isEnrolled: Boolean = true
 )
 
 // ── Etat du Dashboard (mock) ──
@@ -340,12 +341,11 @@ class AdminViewModel {
                     val seanceId = seance[SeanceTable.idSeance]
                     val classeId = seance[SeanceTable.classeId]
 
-                    // Tous les etudiants de la classe qui ont un deviceUuid (enrolés)
+                    // Tous les etudiants de la classe
                     val etudiants = EtudiantTable
                         .selectAll()
                         .where { EtudiantTable.classeId eq classeId }
                         .toList()
-                        .filter { !it[EtudiantTable.deviceUuid].isNullOrEmpty() }
 
                     // Emargements pour cette seance
                     val emargements = EmargementTable
@@ -356,6 +356,7 @@ class AdminViewModel {
                     val rows = etudiants.mapIndexed { index, etudiant ->
                         val eid = etudiant[EtudiantTable.idEtudiant]
                         val emarg = emargements[eid]
+                        val enrolled = !etudiant[EtudiantTable.deviceUuid].isNullOrEmpty()
 
                         val statut = when (emarg?.get(EmargementTable.statutFinal)) {
                             "PRESENT" -> StatutFinal.PRESENT
@@ -377,7 +378,8 @@ class AdminViewModel {
                             statut = statut,
                             heureScanDebut = debutAbrege,
                             heureScanFin = finAbrege,
-                            classe = classeId
+                            classe = classeId,
+                            isEnrolled = enrolled
                         )
                     }
                     Pair(seance, rows)
