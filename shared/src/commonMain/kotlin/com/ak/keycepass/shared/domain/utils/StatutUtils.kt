@@ -20,6 +20,7 @@ object StatutUtils {
      * @param secondScanValide Indique si le second scan de fin a été effectué et validé
      * @return Le [StatutFinal] calculé
      */
+     
     fun determinerStatutFinal(
         heureDebutCoursStr: String,
         heurePremierScanStr: String?,
