@@ -1,240 +1,274 @@
 # KeycePass
 
-Système de gestion de présence numérique pour établissements d'enseignement supérieur.
-
-> **Ce README est destiné au collaborateur qui implémente les vues (UI).**
-> Il documente l'architecture, les flux d'écrans, les nouvelles fonctionnalités de sécurité et les données exposées par les ViewModels.
+> Système de gestion de présence numérique par QR Code pour établissements d'enseignement supérieur.  
+> **Stack** : Kotlin Multiplatform · Compose Desktop · Jetpack Compose · Ktor HTTP · SQLite (Exposed)
 
 ---
 
 ## Table des matières
 
-1. [Architecture générale](#architecture-générale)
-2. [Rôles utilisateur](#rôles-utilisateur)
-3. [Flux d'écrans](#flux-décrans)
-4. [QR Code hebdomadaire](#qr-code-hebdomadaire)
-5. [Vérification de géolocalisation](#vérification-de-géolocalisation)
-6. [API du serveur Desktop](#api-du-serveur-desktop)
-7. [ViewModels disponibles](#viewmodels-disponibles)
-8. [Branches Git](#branches-git)
-9. [Lancer le projet](#lancer-le-projet)
+1. [Présentation](#présentation)
+2. [Architecture](#architecture)
+3. [Prérequis](#prérequis)
+4. [Démarrage rapide](#démarrage-rapide)
+   - [Desktop (Serveur + Admin)](#1-desktop-serveur--admin)
+   - [Android (Mobile)](#2-android-mobile)
+5. [Rôles utilisateur](#rôles-utilisateur)
+6. [Workflow d'utilisation](#workflow-dutilisation)
+7. [API du serveur](#api-du-serveur)
+8. [Format des QR Codes](#format-des-qr-codes)
+9. [Sécurité & Anti-Fraude](#sécurité--anti-fraude)
+10. [Scripts utilitaires](#scripts-utilitaires)
+11. [FAQ / Dépannage](#faq--dépannage)
 
 ---
 
-## Architecture générale
+## Présentation
+
+KeycePass remplace la feuille de présence papier par un système **mobile + desktop** entièrement local (réseau Wi-Fi, aucun cloud requis) :
+
+- 📱 **App Android** : L'étudiant scanne le QR Code de la salle → présence enregistrée automatiquement
+- 💻 **App Desktop** : L'administrateur gère les étudiants, les séances, génère les QR Codes et consulte le tableau de bord
+- 🔐 **Double scan** : entrée + sortie avec calcul automatique (Présent / Retard / Absent selon la règle des 15 min)
+- 🛡️ **Anti-fraude** : liaison exclusive téléphone ↔ étudiant (ANDROID_ID) + vérification GPS optionnelle
+
+---
+
+## Architecture
 
 ```
-┌───────────────────────────────────────────────────────┐
-│                   Module :shared                       │
-│  DTOs communs (ScanPayload, ScanResponse, etc.)        │
-│  Logique de calcul de statut (StatutUtils)             │
-└───────────┬───────────────────────┬───────────────────┘
-            │                       │
-     ┌──────▼──────┐         ┌──────▼──────┐
-     │  androidApp │         │ desktopApp  │
-     │  (mobile)   │◄───────►│  (serveur)  │
-     │  Room + Ktor│  Wi-Fi  │  SQLite     │
-     │  Client     │  local  │  Ktor Server│
-     └─────────────┘         └─────────────┘
+┌────────────────────────────────────────────────────────┐
+│                    MODULE :shared                        │
+│  DTOs communs · Logique de calcul de statut             │
+│  (ScanPayload, ScanResponse, StatutUtils, ...)          │
+└──────────────┬─────────────────────┬────────────────────┘
+               │                     │
+        ┌──────▼──────┐       ┌──────▼──────┐
+        │  androidApp  │       │ desktopApp  │
+        │  (mobile)    │◄─────►│  (serveur)  │
+        │  Room + Ktor │ Wi-Fi │  SQLite     │
+        │  Client      │ :8080 │  Ktor Server│
+        └─────────────┘       └─────────────┘
 ```
 
-- **desktopApp** : L'application Desktop (Windows/Linux/macOS) joue le rôle de **serveur**. Elle héberge un serveur HTTP Ktor sur le port `8080` accessible via le réseau Wi-Fi local. Il n'y a pas de cloud — tout communique en réseau local.
-- **androidApp** : L'app mobile pour étudiants, délégués et enseignants. Elle découvre l'adresse IP du serveur via le QR Code.
-- **shared** : Module Kotlin Multiplatform contenant les DTOs sérialisables et les utilitaires partagés.
+- **desktopApp** : joue le rôle de **serveur HTTP** (Ktor sur port 8080). Toute la communication passe par ce point central.
+- **androidApp** : client mobile pour étudiants et enseignants. Découvre l'adresse IP du serveur via QR Code.
+- **shared** : module Kotlin Multiplatform avec les DTOs sérialisables et les utilitaires partagés.
+
+---
+
+## Prérequis
+
+| Composant | Version minimale |
+|-----------|-----------------|
+| **JDK** | 17+ (recommandé : JDK 21) |
+| **Android SDK** | API 24 (Android 7.0) |
+| **Gradle** | 8.x (wrapper inclus) |
+| **Réseau** | Desktop et mobiles sur le **même réseau Wi-Fi** |
+| **OS Desktop** | Windows 10+ / macOS / Linux |
+
+---
+
+## Démarrage rapide
+
+### 1. Desktop (Serveur + Admin)
+
+#### Option A — Batch (recommandé Windows)
+```batch
+.\launch.bat
+```
+ou avec console de debug :
+```batch
+.\launch_console.bat
+```
+
+#### Option B — Gradle
+```batch
+.\gradlew.bat :desktopApp:run
+```
+
+> ⚠️ Si la fenêtre n'apparaît pas avec Gradle, utiliser `launch.bat` qui lance via `javaw` directement.
+
+**Au démarrage, la console affiche l'URL du serveur :**
+```
+[KeycePass] Serveur démarré : http://192.168.1.50:8080
+```
+→ **Notez cette URL**, elle est nécessaire pour les QR Codes d'enrôlement et pour la saisie manuelle sur mobile.
+
+---
+
+### 2. Android (Mobile)
+
+#### Compiler et installer l'APK
+
+```batch
+# Build APK debug
+.\gradlew.bat :androidApp:assembleDebug
+
+# Installation directe (appareil connecté en USB)
+.\gradlew.bat :androidApp:installDebug
+```
+
+Ou ouvrir le projet dans **Android Studio** et lancer sur un émulateur ou appareil physique.
+
+> ℹ️ Sur émulateur, le GPS sera absent. Le serveur accepte les scans sans coordonnées GPS (champs `lat`/`lon` sont optionnels).
 
 ---
 
 ## Rôles utilisateur
 
-L'application mobile est **identique pour tous**. Le rôle est attribué **lors de l'enrôlement** et stocké localement de façon chiffrée.
+L'application mobile est **identique pour tous**. Le rôle est attribué lors de l'enrôlement initial et stocké de façon chiffrée (EncryptedSharedPreferences, AES-256).
 
-| Rôle        | Accès                                                     |
-|-------------|-----------------------------------------------------------|
-| `ETUDIANT`  | Scanner le QR de présence (début + fin)                   |
-| `DELEGUE`   | Scanner + consulter les statistiques de la séance         |
-| `ENSEIGNANT`| Scanner + clôturer la séance (déverrouilage scan de fin)  |
-
----
-
-## Flux d'écrans
-
-### Écran 1 — Démarrage / Enrôlement
-
-```
-┌─────────────────────────────┐
-│  Bienvenue dans KeycePass   │
-│                             │
-│  [Saisir mon matricule]     │
-│  [Scanner le QR d'enrôlement]│
-└─────────────────────────────┘
-```
-
-1. L'étudiant saisit son **matricule**.
-2. Il scanne le **QR Code d'enrôlement** affiché par l'administration.
-   - Format du QR : `keycepass://enrolement?classeId=B2_IT&token=XXX&serverUrl=http://192.168.x.x:8080`
-3. L'app envoie `POST /api/enrolement` et sauvegarde la session localement (chiffré).
-4. L'app redirige vers l'écran principal selon le rôle reçu.
-
-**ViewModel** : `EnrolementViewModel`
-- `uiState: StateFlow<EnrolementUiState>` — états : `Idle`, `Chargement`, `Succes(role)`, `Erreur`
+| Rôle | Écran affiché après enrôlement | Capacités |
+|------|-------------------------------|-----------|
+| `ETUDIANT` | Scan Screen | Scanner QR entrée + sortie |
+| `ENSEIGNANT` | Teacher Screen | Sélectionner sa séance, clôturer, afficher QR de fin |
+| `DELEGUE` | Scan Screen | Scanner + consultation stats via API (IHM V4) |
 
 ---
 
-### Écran 2 — Dashboard principal (post-enrôlement)
+## Workflow d'utilisation
 
-Affiché selon le rôle stocké :
+### Étape 1 — Import des étudiants (Admin Desktop)
 
-| Rôle        | Widgets affichés                                          |
-|-------------|-----------------------------------------------------------|
-| ETUDIANT    | Bouton « Scanner le QR de présence »                     |
-| DELEGUE     | Bouton « Scanner » + Section stats de la séance          |
-| ENSEIGNANT  | Bouton « Scanner » + Bouton « Clôturer la séance »       |
+1. Onglet **Étudiants** → **Importer Excel**
+2. Sélectionner un fichier `.xlsx` (colonnes : matricule, nom, prénom, classeId)
+3. Les étudiants apparaissent dans la liste (statut **Non Enrôlé** jusqu'au premier scan)
 
----
-
-### Écran 3 — Scanner QR de présence (NOUVEAU flux hebdomadaire)
-
-> ⚠️ **Changement important** : Le QR Code de présence est maintenant **hebdomadaire**, pas par séance. L'UI doit gérer ce flux en deux étapes.
-
-**Étape 1 — Scan du QR hebdomadaire**
-
-L'étudiant scanne le QR affiché par l'administration.
-
-Format du QR hebdomadaire :
-```
-keycepass://presence?semaineId=3&classeId=B2_IT&token=abc123...&serverUrl=http://192.168.x.x:8080
-```
-
-**Étape 2 — Résolution de la séance courante**
-
-L'app appelle automatiquement `GET /api/semaine/{semaineId}/seance-courante` pour savoir quel cours est en cours à l'instant T.
-
-- Si une séance est trouvée → afficher « Cours : Algorithmique — 08h00 à 10h00 » + bouton Confirmer
-- Si aucune séance → message « Aucun cours en cours actuellement. »
-
-**Étape 3 — Envoi du scan**
-
-L'app envoie `POST /api/scan` avec les coordonnées GPS récupérées via le GPS du téléphone.
-
-**ViewModel** : `ScanViewModel`
-- `scanState: StateFlow<ScanUiState>` — états :
-  - `Idle`
-  - `ResolutionSeance` (appel API en cours)
-  - `SeanceTrouvee(nomMatiere, heureDebut, heureFin)`
-  - `ScanEnregistre(statutProvisoire)`
-  - `RefusGeo` ← **NOUVEAU** — afficher « Vous êtes trop loin de la salle »
-  - `Erreur(message)`
+> Des fichiers Excel de test sont disponibles à la racine : `etudiants_B2_IT.xlsx`, `etudiants_B2_MANAGEMENT.xlsx`
 
 ---
 
-### Écran 4 — Résultat du scan
+### Étape 2 — Génération du QR d'enrôlement (Admin Desktop)
 
+1. Onglet **Étudiants** → **QR Code de la classe**
+2. Sélectionner la classe → **Générer**
+3. Afficher ou imprimer le QR Code → les étudiants scannent ce code pour s'enrôler
+
+**Format du QR d'enrôlement :**
 ```
-┌──────────────────────────┐     ┌──────────────────────────┐
-│  ✅ Présence enregistrée │     │  📍 Localisation refusée │
-│  Statut : À l'heure      │     │  Vous êtes à plus de     │
-│  Cours : Algo avancée    │     │  200m de la salle        │
-└──────────────────────────┘     └──────────────────────────┘
+keycepass://enrolement?classeId=B2_IT&token=HMAC_SHA256&serverUrl=http://192.168.1.50:8080&role=ETUDIANT
 ```
 
 ---
 
-## QR Code hebdomadaire
+### Étape 3 — Enrôlement (Étudiant / Enseignant, première utilisation uniquement)
 
-### Pourquoi ?
+Sur l'app mobile :
+1. Saisir le **matricule** (insensible à la casse, espaces ignorés automatiquement)
+2. Saisir **nom** et **prénom**
+3. Scanner le **QR Code d'enrôlement** affiché par l'admin  
+   *ou* saisir manuellement l'URL du serveur (ex: `http://192.168.1.50:8080`)
+4. Sélectionner le **rôle** (`ETUDIANT` ou `ENSEIGNANT`)
+5. Appuyer sur **S'enrôler**
 
-Auparavant, un QR code était généré par séance (manuellement). Désormais, **un seul QR code couvre toute la semaine** pour une classe. L'administration le génère en début de semaine et l'affiche (à l'écran ou imprimé).
+→ L'app se connecte au serveur, lie votre ANDROID_ID à votre matricule, et vous redirige vers votre écran principal.
 
-### Génération (côté Desktop - AdminViewModel)
-
-```kotlin
-// Créer une semaine avec les coordonnées GPS du lieu de cours
-adminViewModel.creerSemaine(
-    classeId = "B2_IT",
-    semaineIso = "2026-W24",
-    lat = 48.8566,   // Latitude saisie depuis Google Maps
-    lon = 2.3522     // Longitude saisie depuis Google Maps
-)
-
-// Générer le QR Code à afficher
-adminViewModel.genererQrPresenceSemaine(semaineId = 3)
-```
-
-### Sécurité du QR Code
-
-Le token contenu dans le QR est un **HMAC-SHA256** signé côté serveur. Il est **opaque** (ne contient aucune information lisible) et empêche la falsification de QR codes maison.
+> **Note** : La comparaison des matricules est insensible à la casse. `"2024-b2-001"`, `"2024-B2-001"` et `" 2024-B2-001 "` sont équivalents.
 
 ---
 
-## Vérification de géolocalisation
+### Étape 4 — Création d'une semaine & QR de présence (Admin Desktop)
 
-### Principe
+1. Onglet **QR Management** → **Nouvelle semaine**
+2. Renseigner : classe, semaine ISO (ex: `2026-W25`), coordonnées GPS de la salle (depuis Google Maps)
+3. Ajouter les séances jour par jour (matière, horaires, enseignant)
+4. **Générer le QR de présence** → à afficher en salle chaque semaine
 
-Quand un étudiant scanne le QR de présence, l'app Android **envoie ses coordonnées GPS** avec le scan. Le serveur Desktop :
-
-1. Récupère la semaine associée à la séance (qui contient la latitude/longitude de référence).
-2. Calcule la distance avec la **formule de Haversine**.
-3. Si la distance > **200 mètres** → le scan est refusé avec `localisationRefusee: true`.
-
-### Côté UI Android
-
-```kotlin
-// L'UI doit récupérer la position GPS AVANT d'appeler le ViewModel
-val location = fusedLocationClient.lastLocation.await()
-
-scanViewModel.enregistrerPremierScan(
-    contenuQr = contenuQrScanne,
-    lat = location?.latitude,
-    lon = location?.longitude
-)
+**Format du QR de présence hebdomadaire :**
 ```
-
-> **Permission Android requise** dans `AndroidManifest.xml` :
-> ```xml
-> <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-> <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-> ```
-
-### Message d'erreur recommandé
-
-```
-📍 Présence refusée
-Vous devez être dans la salle de cours pour enregistrer votre présence.
-Distance maximale autorisée : 200 mètres.
+keycepass://presence?semaineId=3&classeId=B2_IT&token=HMAC&serverUrl=http://192.168.1.50:8080
 ```
 
 ---
 
-## API du serveur Desktop
+### Étape 5 — Scan d'arrivée (Étudiant)
 
-Base URL : `http://{IP_DU_PC}:8080`
+1. Ouvrir l'app → Bouton **Scanner** (radar pulsant)
+2. Scanner le QR Code affiché en salle
+3. L'app résout automatiquement la séance en cours → affiche la matière et les horaires
+4. Statut provisoire affiché : **À l'heure** (≤ 15 min) ou **En retard** (> 15 min)
+
+---
+
+### Étape 6 — Clôture de séance (Enseignant)
+
+1. Écran **Espace Enseignant** → sélectionner la séance dans la liste
+2. Appuyer sur **Clôturer la séance**
+3. Un QR Code de fin est généré et affiché → les étudiants scannent ce code pour valider leur sortie
+
+**Format du QR de clôture :**
+```
+teacher-close-{seanceId}
+```
+
+---
+
+### Étape 7 — Scan de sortie (Étudiant)
+
+1. Scanner le QR Code de fin affiché par l'enseignant
+2. L'app calcule et affiche le **statut final** : ✅ Présent / ⚠️ Retard / ❌ Absent
+
+---
+
+### Étape 8 — Dashboard Admin (Desktop)
+
+Le tableau de bord se rafraîchit automatiquement :
+- **KPIs** : Présents / Retards / Absents / Total
+- **Liste des étudiants** : tous affichés (enrôlés ou non), avec badge coloré
+  - 🟢 **Présent** — 🟡 **Retard** — 🔴 **Absent** — ⚪ **Non Enrôlé**
+- **Filtre par classe** : sélecteur dynamique chargé depuis la DB
+- **Statut de séance** : PLANIFIÉ / EN_COURS / CLÔTURE_ENSEIGNANT
+
+---
+
+## API du serveur
+
+Base URL : `http://{IP_DU_DESKTOP}:8080`
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
 | `GET` | `/api/ping` | Santé du serveur |
-| `POST` | `/api/enrolement` | Enrôler un étudiant (liaison UUID) |
-| `POST` | `/api/scan` | Enregistrer un scan de présence (+ coords GPS) |
+| `POST` | `/api/enrolement` | Enrôler un étudiant ou enseignant (liaison UUID) |
+| `POST` | `/api/scan` | Enregistrer un scan de présence (début ou fin) |
 | `GET` | `/api/seance/{id}/statut` | Vérifier si la séance est clôturée |
-| `POST` | `/api/seance/{id}/cloturer` | L'enseignant clôture la séance |
+| `POST` | `/api/seance/{id}/cloturer` | Clôturer la séance (enseignant) |
 | `GET` | `/api/seance/{id}/stats` | Statistiques de présence (délégué) |
-| `GET` | `/api/semaine/{id}/seance-courante` | **NOUVEAU** — Séance active pour une semaine |
+| `GET` | `/api/semaine/{id}/seance-courante` | Séance active à l'instant T pour une semaine |
+| `GET` | `/api/seances` | Liste complète de toutes les séances |
+| `POST` | `/api/sync` | Réception batch de scans hors-ligne |
 
-### Détail : `POST /api/scan`
+### Exemple — `POST /api/enrolement`
 
-**Body** (JSON) :
+**Corps :**
 ```json
 {
-  "matricule": "2024001",
-  "deviceUuid": "abc-def-123",
+  "matricule": "2024-B2-001",
+  "deviceUuid": "abc-def-123-456"
+}
+```
+
+**Réponse :**
+```json
+{ "success": true }
+```
+
+### Exemple — `POST /api/scan`
+
+**Corps :**
+```json
+{
+  "matricule": "2024-B2-001",
+  "deviceUuid": "abc-def-123-456",
   "seanceId": 42,
-  "timestamp": "2026-06-10T08:05:00",
+  "timestamp": "2026-06-13T08:05:00",
   "scanType": "DEBUT",
   "lat": 48.8566,
   "lon": 2.3522
 }
 ```
 
-**Réponse** :
+**Réponse :**
 ```json
 {
   "success": true,
@@ -244,122 +278,98 @@ Base URL : `http://{IP_DU_PC}:8080`
 }
 ```
 
-### Détail : `GET /api/semaine/{semaineId}/seance-courante`
-
-**Réponse** (si une séance est en cours) :
-```json
-{
-  "seanceId": 42,
-  "nomMatiere": "Algorithmique avancée",
-  "heureDebut": "08:00:00",
-  "heureFin": "10:00:00"
-}
-```
-
-**Réponse** (aucune séance) : `404 Not Found`
-
----
-
-## ViewModels disponibles
-
-### `EnrolementViewModel` (androidApp)
-
-| StateFlow | Type | Description |
-|-----------|------|-------------|
-| `uiState` | `EnrolementUiState` | État du processus d'enrôlement |
-
-| Méthode | Description |
-|---------|-------------|
-| `enroler(matricule, deviceUuid, contenuQr)` | Lance l'enrôlement |
-
----
-
-### `ScanViewModel` (androidApp)
-
-| StateFlow | Type | Description |
-|-----------|------|-------------|
-| `scanState` | `ScanUiState` | État du scan en cours |
-
-| Méthode | Paramètres | Description |
-|---------|-----------|-------------|
-| `enregistrerPremierScan(qr, lat?, lon?)` | QR + GPS optionnel | Scan d'arrivée |
-| `enregistrerSecondScan(qr, lat?, lon?)` | QR + GPS optionnel | Scan de fin |
-
----
-
-### `DelegueViewModel` (androidApp)
-
-| StateFlow | Type | Description |
-|-----------|------|-------------|
-| `statsSeance` | `SessionStatusDto?` | Statistiques en temps réel |
-
----
-
-### `AdminViewModel` (desktopApp)
-
-| StateFlow | Type | Description |
-|-----------|------|-------------|
-| `classes` | `List<String>` | Classes disponibles |
-| `etudiants` | `List<Etudiant>` | Étudiants de la classe |
-| `semaines` | `List<SeanceSemaineRow>` | Semaines créées |
-| `qrCodeImage` | `BufferedImage?` | QR Code à afficher |
-| `importState` | `ImportState` | État de l'import Excel |
-| `creationSemaineState` | `CreationSemaineState` | État de création d'une semaine |
-
-| Méthode | Description |
-|---------|-------------|
-| `importerExcel(fichier)` | Import liste étudiants depuis Excel |
-| `genererQrEnrolement(classeId)` | QR Code d'enrôlement d'une classe |
-| `creerSemaine(classeId, semaineIso, lat, lon)` | Créer une semaine avec géo |
-| `chargerSemaines(classeId)` | Charger les semaines d'une classe |
-| `genererQrPresenceSemaine(semaineId)` | QR Code de présence hebdomadaire |
-| `chargerStatistiquesSeance(seanceId)` | Récupérer les stats de présence |
-
----
-
-## Branches Git
-
-| Branche | Contenu |
-|---------|---------|
-| `feature/admin-desktop` | Interface et serveur Desktop (à développer côté UI Desktop) |
-| `feature/android-logic` | Logique métier Android — ViewModels, Repository, DAO |
-| `main` | Branche stable (merge après validation) |
-
----
-
-## Lancer le projet
-
-### Desktop (serveur)
-```bash
-KeycePass_Launch.bat
-```
-
-> ⚠️ Ne pas utiliser `./gradlew :desktopApp:run` : le daemon Gradle tourne en Session 0,
-> donc la fenêtre Compose démarre invisible pour l’utilisateur.
-> Le launcher utilise `javaw` + `-classpath "lib/*"` + `-Dskiko.renderApi=SOFTWARE_FAST`.
-
-### Android
-Ouvrir dans Android Studio et lancer sur un émulateur ou appareil physique.
-
-> ⚠️ Pour les scans depuis un émulateur Android, les coordonnées GPS seront nulles (pas de vrai GPS). Le serveur accepte les scans sans coordonnées (elles seront `null` en base).
-
 ---
 
 ## Format des QR Codes
 
 | Type | Format |
 |------|--------|
-| Enrôlement | `keycepass://enrolement?classeId={id}&token={tok}&serverUrl={url}` |
-| Présence hebdomadaire | `keycepass://presence?semaineId={id}&classeId={cId}&token={hmac}&serverUrl={url}` |
+| **Enrôlement** | `keycepass://enrolement?classeId={id}&token={hmac}&serverUrl={url}&role={ETUDIANT\|ENSEIGNANT}` |
+| **Présence hebdomadaire** | `keycepass://presence?semaineId={id}&classeId={cId}&token={hmac}&serverUrl={url}` |
+| **Clôture enseignant** | `teacher-close-{seanceId}` |
+
+> Le token HMAC-SHA256 intégré dans les QR codes d'enrôlement et de présence empêche la falsification. Il est généré côté serveur lors de la création de la semaine.
 
 ---
 
-## Saisie des coordonnées GPS (admin)
+## Sécurité & Anti-Fraude
 
-Pour obtenir la latitude/longitude d'une salle :
+### Liaison appareil ↔ étudiant (Device Binding)
+
+Lors de l'enrôlement, l'`ANDROID_ID` de l'appareil est lié de façon permanente au matricule en base :
+
+| Situation | Comportement |
+|-----------|-------------|
+| Première liaison (`deviceUuid` null) | ✅ Accepté |
+| Même appareil re-scanne | ✅ Accepté (re-enrôlement) |
+| Appareil différent | ❌ Refusé (fraude détectée) |
+| Admin réinitialise | ✅ Liaison effacée, re-enrôlement possible |
+
+### Vérification GPS (optionnelle)
+
+Si des coordonnées GPS sont fournies lors du scan et qu'une semaine avec coordonnées GPS de référence existe, le serveur calcule la distance (formule de Haversine). Si la distance > **200 mètres**, le scan est refusé avec `localisationRefusee: true`.
+
+### Chiffrement mobile
+
+Les données sensibles (matricule, UUID, rôle, URL serveur) sont stockées via **EncryptedSharedPreferences** (AES256-GCM, clé maître AES256).
+
+---
+
+## Scripts utilitaires
+
+```bash
+# Générer des fichiers Excel de test (nécessite openpyxl)
+python generate_etudiants.py
+
+# Nettoyer la base de données (conserve la structure, vide les données)
+python clean_db.py
+```
+
+Pour obtenir les coordonnées GPS d'une salle :
 1. Ouvrir [Google Maps](https://maps.google.com)
-2. Faire un clic droit sur l'emplacement → « Plus d'infos sur cet endroit »
-3. Copier les coordonnées affichées en haut (ex. `48.8566, 2.3522`)
-4. Les saisir dans le formulaire de création de semaine
+2. Clic droit sur l'emplacement → **Plus d'infos sur cet endroit**
+3. Copier les coordonnées (ex. `48.8566, 2.3522`)
 
-**Rayon de tolérance** : 200 mètres (global, non modifiable par l'UI pour l'instant).
+---
+
+## FAQ / Dépannage
+
+### ❓ Quelle adresse IP saisir sur le mobile ?
+
+Regarder la **console de l'application Desktop** au démarrage :
+```
+[KeycePass] Serveur démarré : http://192.168.1.50:8080
+```
+Cette URL est également encodée dans les QR Codes d'enrôlement.
+
+### ❓ L'enrôlement échoue ("Étudiant introuvable")
+
+Vérifier que :
+- Le matricule saisi correspond exactement à celui dans le fichier Excel importé (la casse est ignorée, mais les caractères doivent correspondre)
+- L'étudiant a bien été importé dans la base via l'onglet **Étudiants** du Desktop
+- L'URL du serveur est correcte et accessible (tester `http://{IP}:8080/api/ping` dans un navigateur)
+
+### ❓ Le scan ne redirige pas vers l'écran de scan
+
+Vérifier que :
+- L'enrôlement a bien réussi (réponse `{"success": true}` attendue)
+- Le `sessionManager.estEnrole` est `true` après l'enrôlement
+- L'app n'est pas en cache — la relancer si nécessaire
+
+### ❓ Le pare-feu Windows bloque les connexions
+
+Autoriser les connexions entrantes sur le port **8080** pour Java/Kotlin :
+```
+Panneau de configuration → Pare-feu Windows Defender
+→ Règles de trafic entrant → Nouvelle règle → Port → TCP 8080
+```
+
+### ❓ L'étudiant apparaît "Non Enrôlé" dans le dashboard
+
+L'étudiant n'a pas encore effectué son enrôlement (son `deviceUuid` est null en base). Il doit scanner le QR d'enrôlement avec son téléphone.
+
+---
+
+> **Dépôt GitHub** : [keisary/KeycePass](https://github.com/keisary/KeycePass)  
+> **Documentation technique** : [rapport_conception_technique_keycepass.md](./rapport_conception_technique_keycepass.md)  
+> **Cahier des charges** : [docs/cahier-des-charges-v3.md](./docs/cahier-des-charges-v3.md)
